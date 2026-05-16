@@ -36,21 +36,44 @@ class ProductResource extends Resource
                             ->searchable()
                             ->preload()
                             ->live()
-                            ->afterStateUpdated(fn (Forms\Set $set, ?string $state) => $set('sku', app(ProductService::class)->generateSku($state))),
+                            ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, ?string $state) {
+                                $set('sku', app(ProductService::class)->generateSku(
+                                    $state ? (int) $state : null,
+                                    $get('name'),
+                                    $get('unit'),
+                                ));
+                            }),
+                        Forms\Components\TextInput::make('name')
+                            ->required()
+                            ->maxLength(255)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, ?string $state) {
+                                $set('sku', app(ProductService::class)->generateSku(
+                                    $get('category_id') ? (int) $get('category_id') : null,
+                                    $state,
+                                    $get('unit'),
+                                ));
+                            }),
+                        Forms\Components\TextInput::make('unit')
+                            ->required()
+                            ->placeholder('e.g. Pcs, Box, Kg')
+                            ->maxLength(50)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, ?string $state) {
+                                $set('sku', app(ProductService::class)->generateSku(
+                                    $get('category_id') ? (int) $get('category_id') : null,
+                                    $get('name'),
+                                    $state,
+                                ));
+                            }),
                         Forms\Components\TextInput::make('sku')
                             ->label('SKU')
                             ->readonly()
                             ->required()
-                            ->unique(ignoreRecord: true),
-                        Forms\Components\TextInput::make('name')
-                            ->required()
-                            ->maxLength(255),
+                            ->unique(ignoreRecord: true)
+                            ->helperText('Format: AAA-namaproduk-unit-000 (otomatis)'),
                         Forms\Components\TextInput::make('barcode')
                             ->maxLength(255),
-                        Forms\Components\TextInput::make('unit')
-                            ->required()
-                            ->placeholder('e.g. Pcs, Box, Kg')
-                            ->maxLength(50),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Inventory Details')

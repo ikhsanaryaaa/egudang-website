@@ -23,10 +23,10 @@ class QrService
             Storage::makeDirectory($directory);
         }
 
-        $filename = 'qr-' . $product->sku . '.png';
+        $filename = 'qr-' . $product->sku . '.svg';
         $path = $directory . '/' . $filename;
 
-        $qrImage = QrCode::format('png')
+        $qrImage = QrCode::format('svg')
             ->size(300)
             ->margin(2)
             ->generate($product->sku);
