@@ -13,6 +13,17 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
+        // Super Admin
+        $superAdmin = User::firstOrCreate(
+            ['email' => 'superadmin@e-gudang.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $superAdmin->syncRoles(['Super Admin']);
+
         // Manager
         $manager = User::firstOrCreate(
             ['email' => 'manager@e-gudang.com'],
