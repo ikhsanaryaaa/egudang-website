@@ -13,22 +13,67 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
+use App\Services\ProductService;
+
 class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-
-    public static function shouldRegisterNavigation(): bool
-    {
-        return auth()->user()->can('viewAny', static::getModel());
-    }
+    protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                //
+                Forms\Components\Section::make('Product Information')
+                    ->schema([
+                        Forms\Components\Select::make('category_id')
+                            ->relationship('category', 'name')
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->afterStateUpdated(fn (Forms\Set $set, ?string $state) => $set('sku', app(ProductService::class)->generateSku($state))),
+                        Forms\Components\TextInput::make('sku')
+                            ->label('SKU')
+                            ->readonly()
+                            ->required()
+                            ->unique(ignoreRecord: true),
+                        Forms\Components\TextInput::make('name')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('barcode')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('unit')
+                            ->required()
+                            ->placeholder('e.g. Pcs, Box, Kg')
+                            ->maxLength(50),
+                    ])->columns(2),
+
+                Forms\Components\Section::make('Inventory Details')
+                    ->schema([
+                        Forms\Components\TextInput::make('stock')
+                            ->numeric()
+                            ->default(0)
+                            ->required()
+                            ->minValue(0),
+                        Forms\Components\TextInput::make('minimum_stock')
+                            ->numeric()
+                            ->default(0)
+                            ->required()
+                            ->minValue(0),
+                    ])->columns(2),
+
+                Forms\Components\Section::make('Media & Description')
+                    ->schema([
+                        Forms\Components\FileUpload::make('image_path')
+                            ->label('Product Image')
+                            ->image()
+                            ->directory('products'),
+                        Forms\Components\Textarea::make('description')
+                            ->maxLength(65535)
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 
@@ -36,14 +81,31 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
-                //
+                Tables\Columns\ImageColumn::make('image_path')
+                    ->label('Image')
+                    ->circular(),
+                Tables\Columns\TextColumn::make('sku')
+                    ->label('SKU')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('category.name')
+                    ->badge()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('stock')
+                    ->numeric()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('unit')
+                    ->sortable(),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('category')
+                    ->relationship('category', 'name'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -52,10 +114,19 @@ class ProductResource extends Resource
             ]);
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ManageProducts::route('/'),
+            'index' => Pages\ListProducts::route('/'),
+            'create' => Pages\CreateProduct::route('/create'),
+            'edit' => Pages\EditProduct::route('/{record}/edit'),
         ];
     }
 }
