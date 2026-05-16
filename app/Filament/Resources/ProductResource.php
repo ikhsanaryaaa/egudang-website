@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 use App\Services\ProductService;
+use App\Services\QrService;
+use Illuminate\Support\Facades\Storage;
 
 class ProductResource extends Resource
 {
@@ -74,6 +76,22 @@ class ProductResource extends Resource
                             ->maxLength(65535)
                             ->columnSpanFull(),
                     ]),
+
+                Forms\Components\Section::make('QR Code')
+                    ->schema([
+                        Forms\Components\Placeholder::make('qr_preview')
+                            ->label('QR Code Preview')
+                            ->content(function (?Product $record) {
+                                if (!$record || !$record->qr_code_path) {
+                                    return 'QR Code akan dibuat otomatis setelah produk disimpan.';
+                                }
+                                $url = Storage::url($record->qr_code_path);
+                                return new \Illuminate\Support\HtmlString(
+                                    '<img src="' . $url . '" alt="QR Code" style="width: 200px; height: 200px;" />'
+                                );
+                            }),
+                    ])
+                    ->visible(fn (?Product $record) => $record !== null),
             ]);
     }
 
@@ -99,6 +117,11 @@ class ProductResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('unit')
                     ->sortable(),
+                Tables\Columns\ImageColumn::make('qr_code_path')
+                    ->label('QR')
+                    ->disk('public')
+                    ->width(40)
+                    ->height(40),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('category')
@@ -106,6 +129,15 @@ class ProductResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('downloadQr')
+                    ->label('QR')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->visible(fn (Product $record) => $record->qr_code_path !== null)
+                    ->action(function (Product $record) {
+                        $path = Storage::disk('public')->path($record->qr_code_path);
+                        return response()->download($path, 'qr-' . $record->sku . '.png');
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
