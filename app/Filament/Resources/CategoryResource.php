@@ -7,11 +7,13 @@ use App\Filament\Resources\CategoryResource\RelationManagers;
 use App\Models\Category;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Str;
 
 class CategoryResource extends Resource
 {
@@ -27,7 +29,7 @@ class CategoryResource extends Resource
                     ->required()
                     ->maxLength(255)
                     ->live(onBlur: true)
-                    ->afterStateUpdated(fn (Forms\Set $set, ?string $state) => $set('slug', \Illuminate\Support\Str::slug($state))),
+                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set('slug', Str::slug($state))),
                 Forms\Components\TextInput::make('code')
                     ->required()
                     ->maxLength(10)
@@ -80,7 +82,9 @@ class CategoryResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ManageCategories::route('/'),
+            'index' => Pages\ListCategories::route('/'),
+            'create' => Pages\CreateCategory::route('/create'),
+            'edit' => Pages\EditCategory::route('/{record}/edit'),
         ];
     }
 }
