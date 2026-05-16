@@ -6,6 +6,7 @@ use App\Filament\Resources\StockTransactionResource;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\Facades\Storage;
 
 class ViewStockTransaction extends ViewRecord
 {
@@ -49,6 +50,25 @@ class ViewStockTransaction extends ViewRecord
                             ])
                             ->columns(4),
                     ]),
+
+                Infolists\Components\Section::make('Attachments')
+                    ->schema([
+                        Infolists\Components\RepeatableEntry::make('attachments')
+                            ->schema([
+                                Infolists\Components\TextEntry::make('file_name')
+                                    ->label('File'),
+                                Infolists\Components\TextEntry::make('file_type')
+                                    ->label('Type')
+                                    ->badge(),
+                                Infolists\Components\TextEntry::make('formatted_size')
+                                    ->label('Size'),
+                                Infolists\Components\TextEntry::make('created_at')
+                                    ->label('Uploaded')
+                                    ->dateTime(),
+                            ])
+                            ->columns(4),
+                    ])
+                    ->visible(fn ($record) => $record->attachments->count() > 0),
             ]);
     }
 }
