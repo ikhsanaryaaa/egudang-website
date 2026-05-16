@@ -10,13 +10,14 @@
     "require": {
         "php": "^8.1",
         "barryvdh/laravel-dompdf": "^3.1",
+        "endroid/qr-code": "^5.1",
         "filament/filament": "3.2",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^10.10",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
         "maatwebsite/excel": "^3.1",
-        "simplesoftwareio/simple-qrcode": "^4.2",
+        "picqer/php-barcode-generator": "^2.4",
         "spatie/laravel-permission": "^6.25"
     },
     "require-dev": {

@@ -9,8 +9,8 @@ class ProductService
 {
     /**
      * Generate a unique SKU for a product.
-     * Format: AAA-productname-unit-000
-     * Example: ELC-laptopasus-pcs-001
+     * Format: AAA-PRODUCTNAME-UNIT-000
+     * Example: FF-CHAMP-NUGGET-500GR-001
      *
      * @param int|null $categoryId
      * @param string|null $productName
@@ -28,9 +28,17 @@ class ProductService
             return null;
         }
 
-        $categoryCode = strtoupper($category->code);
-        $namePart = Str::slug($productName, '');
-        $unitPart = strtolower(trim($unit));
+        $categoryCode = strtoupper(trim($category->code));
+
+        // Convert product name: "Champ Nugget" -> "CHAMP-NUGGET"
+        $namePart = strtoupper(trim($productName));
+        $namePart = preg_replace('/\s+/', '-', $namePart);
+        $namePart = preg_replace('/[^A-Z0-9\-]/', '', $namePart);
+
+        // Convert unit: "500 Gr" -> "500GR"
+        $unitPart = strtoupper(trim($unit));
+        $unitPart = preg_replace('/\s+/', '', $unitPart);
+        $unitPart = preg_replace('/[^A-Z0-9]/', '', $unitPart);
 
         $prefix = $categoryCode . '-' . $namePart . '-' . $unitPart . '-';
 

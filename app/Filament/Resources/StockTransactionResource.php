@@ -67,6 +67,7 @@ class StockTransactionResource extends Resource
                             ->multiple()
                             ->directory('attachments/stocktransaction')
                             ->disk('public')
+                            ->preserveFilenames()
                             ->acceptedFileTypes(AttachmentService::getAcceptedFileTypes())
                             ->maxSize(10240)
                             ->maxFiles(5)

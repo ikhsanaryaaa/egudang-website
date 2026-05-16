@@ -70,8 +70,7 @@ class ProductResource extends Resource
                             ->label('SKU')
                             ->readonly()
                             ->required()
-                            ->unique(ignoreRecord: true)
-                            ->helperText('Format: AAA-namaproduk-unit-000 (otomatis)'),
+                            ->unique(ignoreRecord: true),
                         Forms\Components\TextInput::make('barcode')
                             ->maxLength(255),
                     ])->columns(2),
@@ -95,7 +94,8 @@ class ProductResource extends Resource
                         Forms\Components\FileUpload::make('image_path')
                             ->label('Product Image')
                             ->image()
-                            ->directory('products'),
+                            ->directory('products')
+                            ->preserveFilenames(),
                         Forms\Components\Textarea::make('description')
                             ->maxLength(65535)
                             ->columnSpanFull(),
@@ -108,13 +108,27 @@ class ProductResource extends Resource
                             ->multiple()
                             ->directory('attachments/product')
                             ->disk('public')
+                            ->preserveFilenames()
                             ->acceptedFileTypes(AttachmentService::getAcceptedFileTypes())
                             ->maxSize(10240)
                             ->maxFiles(5)
                             ->helperText('Maks 10MB per file. Format: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG.'),
+                        Forms\Components\Placeholder::make('existing_attachments')
+                            ->label('Dokumen Tersimpan')
+                            ->content(function (?Product $record) {
+                                if (!$record || $record->attachments->isEmpty()) {
+                                    return 'Belum ada dokumen.';
+                                }
+                                $links = $record->attachments->map(function ($att) {
+                                    $url = Storage::url($att->file_path);
+                                    return '<a href="' . $url . '" target="_blank" style="color:#d97706;text-decoration:underline;">' . $att->file_name . '</a> (' . $att->formatted_size . ')';
+                                })->implode('<br>');
+                                return new \Illuminate\Support\HtmlString($links);
+                            })
+                            ->visible(fn (?Product $record) => $record !== null),
                     ]),
 
-                Forms\Components\Section::make('QR Code')
+                Forms\Components\Section::make('QR Code & Barcode')
                     ->schema([
                         Forms\Components\Placeholder::make('qr_preview')
                             ->label('QR Code Preview')
@@ -127,7 +141,19 @@ class ProductResource extends Resource
                                     '<img src="' . $url . '" alt="QR Code" style="width: 200px; height: 200px;" />'
                                 );
                             }),
+                        Forms\Components\Placeholder::make('barcode_preview')
+                            ->label('Barcode Preview')
+                            ->content(function (?Product $record) {
+                                if (!$record || !$record->barcode_image_path) {
+                                    return 'Barcode akan dibuat otomatis jika field barcode diisi.';
+                                }
+                                $url = Storage::url($record->barcode_image_path);
+                                return new \Illuminate\Support\HtmlString(
+                                    '<img src="' . $url . '" alt="Barcode" style="height: 80px;" />'
+                                );
+                            }),
                     ])
+                    ->columns(2)
                     ->visible(fn (?Product $record) => $record !== null),
             ]);
     }
@@ -139,10 +165,6 @@ class ProductResource extends Resource
                 Tables\Columns\ImageColumn::make('image_path')
                     ->label('Image')
                     ->circular(),
-                Tables\Columns\TextColumn::make('sku')
-                    ->label('SKU')
-                    ->searchable()
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
@@ -159,6 +181,11 @@ class ProductResource extends Resource
                     ->disk('public')
                     ->width(40)
                     ->height(40),
+                Tables\Columns\ImageColumn::make('barcode_image_path')
+                    ->label('Barcode')
+                    ->disk('public')
+                    ->width(80)
+                    ->height(40),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('category')
@@ -166,15 +193,6 @@ class ProductResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('downloadQr')
-                    ->label('QR')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->color('success')
-                    ->visible(fn (Product $record) => $record->qr_code_path !== null)
-                    ->action(function (Product $record) {
-                        $path = Storage::disk('public')->path($record->qr_code_path);
-                        return response()->download($path, 'qr-' . $record->sku . '.png');
-                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
