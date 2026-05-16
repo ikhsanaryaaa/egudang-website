@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\StockTransactionResource\Pages;
 use App\Models\StockTransaction;
 use App\Models\Product;
+use App\Services\AttachmentService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -57,6 +58,19 @@ class StockTransactionResource extends Resource
                             ->minItems(1)
                             ->defaultItems(1)
                             ->addActionLabel('Tambah Produk'),
+                    ]),
+
+                Forms\Components\Section::make('Documents')
+                    ->schema([
+                        Forms\Components\FileUpload::make('attachments_upload')
+                            ->label('Lampiran Dokumen')
+                            ->multiple()
+                            ->directory('attachments/stocktransaction')
+                            ->disk('public')
+                            ->acceptedFileTypes(AttachmentService::getAcceptedFileTypes())
+                            ->maxSize(10240)
+                            ->maxFiles(5)
+                            ->helperText('Maks 10MB per file. Format: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG.'),
                     ]),
             ]);
     }

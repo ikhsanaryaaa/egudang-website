@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 use App\Services\ProductService;
 use App\Services\QrService;
+use App\Services\AttachmentService;
 use Illuminate\Support\Facades\Storage;
 
 class ProductResource extends Resource
@@ -75,6 +76,19 @@ class ProductResource extends Resource
                         Forms\Components\Textarea::make('description')
                             ->maxLength(65535)
                             ->columnSpanFull(),
+                    ]),
+
+                Forms\Components\Section::make('Documents')
+                    ->schema([
+                        Forms\Components\FileUpload::make('attachments_upload')
+                            ->label('Product Documents')
+                            ->multiple()
+                            ->directory('attachments/product')
+                            ->disk('public')
+                            ->acceptedFileTypes(AttachmentService::getAcceptedFileTypes())
+                            ->maxSize(10240)
+                            ->maxFiles(5)
+                            ->helperText('Maks 10MB per file. Format: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG.'),
                     ]),
 
                 Forms\Components\Section::make('QR Code')
