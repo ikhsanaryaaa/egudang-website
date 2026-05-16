@@ -3,14 +3,34 @@
 namespace App\Filament\Resources\StockTransactionResource\Pages;
 
 use App\Filament\Resources\StockTransactionResource;
+use Filament\Actions;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ViewStockTransaction extends ViewRecord
 {
     protected static string $resource = StockTransactionResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\Action::make('downloadPdf')
+                ->label('Download PDF')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('danger')
+                ->action(function () {
+                    $transaction = $this->record->load('items.product', 'creator');
+                    $pdf = Pdf::loadView('pdf.stock-transaction', compact('transaction'));
+                    return response()->streamDownload(
+                        fn () => print($pdf->output()),
+                        $transaction->transaction_number . '.pdf'
+                    );
+                }),
+        ];
+    }
 
     public function infolist(Infolist $infolist): Infolist
     {

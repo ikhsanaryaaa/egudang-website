@@ -3,8 +3,11 @@
 namespace App\Services;
 
 use App\Models\Product;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\Storage;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class QrService
 {
@@ -17,21 +20,25 @@ class QrService
      */
     public function generateForProduct(Product $product): string
     {
-        $directory = 'public/qrcodes';
+        $directory = 'qrcodes';
 
-        if (!Storage::exists($directory)) {
-            Storage::makeDirectory($directory);
+        if (!Storage::disk('public')->exists($directory)) {
+            Storage::disk('public')->makeDirectory($directory);
         }
 
-        $filename = 'qr-' . $product->sku . '.svg';
+        $filename = 'qr-' . $product->sku . '.png';
         $path = $directory . '/' . $filename;
 
-        $qrImage = QrCode::format('svg')
+        $result = Builder::create()
+            ->writer(new PngWriter())
+            ->data($product->sku)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
             ->size(300)
-            ->margin(2)
-            ->generate($product->sku);
+            ->margin(10)
+            ->build();
 
-        Storage::put($path, $qrImage);
+        Storage::disk('public')->put($path, $result->getString());
 
         return 'qrcodes/' . $filename;
     }
