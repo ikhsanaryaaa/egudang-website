@@ -24,6 +24,10 @@ class ProductResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
+    protected static ?string $pluralModelLabel = 'Products';
+
+    protected static ?int $navigationSort = 3;
+
     public static function form(Form $form): Form
     {
         return $form
@@ -209,12 +213,14 @@ class ProductResource extends Resource
                     ->disk('public')
                     ->width(40)
                     ->height(40)
+                    ->extraImgAttributes(['style' => 'background:#fff; padding:4px; border-radius:6px;'])
                     ->visibleFrom('md'),
                 Tables\Columns\ImageColumn::make('barcode_image_path')
                     ->label('Barcode')
                     ->disk('public')
                     ->width(80)
                     ->height(40)
+                    ->extraImgAttributes(['style' => 'background:#fff; padding:4px; border-radius:6px;'])
                     ->visibleFrom('md'),
             ])
             ->filters([

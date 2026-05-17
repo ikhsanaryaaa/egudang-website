@@ -9,8 +9,8 @@ class ProductService
 {
     /**
      * Generate a unique SKU for a product.
-     * Format: AAA-PRODUCTNAME-BRAND-UNIT-000
-     * Example: FF-CHAMP-NUGGET-SAMSUNG-500GR-001
+     * Format: AAA-BRAND-NAME-UNIT-000
+     * Example: FF-CHAMP-NUGGET-500GR-001
      *
      * @param int|null $categoryId
      * @param string|null $productName
@@ -46,7 +46,7 @@ class ProductService
         $unitPart = preg_replace('/\s+/', '', $unitPart);
         $unitPart = preg_replace('/[^A-Z0-9]/', '', $unitPart);
 
-        $prefix = $categoryCode . '-' . $namePart . '-' . $brandPart . '-' . $unitPart . '-';
+        $prefix = $categoryCode . '-' . $brandPart . '-' . $namePart . '-' . $unitPart . '-';
 
         $lastProduct = Product::where('sku', 'like', $prefix . '%')
             ->orderBy('sku', 'desc')

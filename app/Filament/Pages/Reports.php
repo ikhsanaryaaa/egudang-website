@@ -25,7 +25,7 @@ class Reports extends Page implements HasForms
 
     protected static ?string $navigationLabel = 'Reports';
 
-    protected static ?int $navigationSort = 99;
+    protected static ?int $navigationSort = 2;
 
     protected static string $view = 'filament.pages.reports';
 
@@ -43,42 +43,42 @@ class Reports extends Page implements HasForms
                 Forms\Components\Section::make('Report Filters')
                     ->schema([
                         Forms\Components\Select::make('report_type')
-                            ->label('Jenis Laporan')
+                            ->label('Report Type')
                             ->options([
-                                'product_stock' => 'Laporan Stok Produk',
-                                'stock_movement' => 'Laporan Pergerakan Stok',
-                                'low_stock' => 'Laporan Stok Rendah',
-                                'inventory_batch' => 'Laporan Batch Inventory',
+                                'product_stock' => 'Product Stock Report',
+                                'stock_movement' => 'Stock Movement Report',
+                                'low_stock' => 'Low Stock Report',
+                                'inventory_batch' => 'Inventory Batch Report',
                             ])
                             ->required()
                             ->live()
                             ->native(false),
 
                         Forms\Components\DatePicker::make('date_from')
-                            ->label('Dari Tanggal')
+                            ->label('Date From')
                             ->visible(fn ($get) => $get('report_type') === 'stock_movement'),
 
                         Forms\Components\DatePicker::make('date_to')
-                            ->label('Sampai Tanggal')
+                            ->label('Date To')
                             ->visible(fn ($get) => $get('report_type') === 'stock_movement'),
 
                         Forms\Components\Select::make('category_id')
-                            ->label('Kategori')
+                            ->label('Category')
                             ->options(Category::pluck('name', 'id'))
                             ->searchable()
                             ->visible(fn ($get) => in_array($get('report_type'), ['product_stock'])),
 
                         Forms\Components\Select::make('product_id')
-                            ->label('Produk')
+                            ->label('Product')
                             ->options(Product::pluck('name', 'id'))
                             ->searchable()
                             ->visible(fn ($get) => in_array($get('report_type'), ['stock_movement', 'inventory_batch'])),
 
                         Forms\Components\Select::make('transaction_type')
-                            ->label('Tipe Transaksi')
+                            ->label('Transaction Type')
                             ->options([
-                                'IN' => 'Barang Masuk',
-                                'OUT' => 'Barang Keluar',
+                                'IN' => 'Stock In',
+                                'OUT' => 'Stock Out',
                                 'ADJ' => 'Stock Adjustment',
                             ])
                             ->visible(fn ($get) => $get('report_type') === 'stock_movement'),
