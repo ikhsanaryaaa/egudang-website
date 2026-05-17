@@ -56,7 +56,7 @@ class UserResource extends Resource
                             ->dehydrateStateUsing(fn (string $state): string => Hash::make($state))
                             ->maxLength(255)
                             ->helperText(fn (string $operation): string =>
-                                $operation === 'edit' ? 'Kosongkan jika tidak ingin mengubah password.' : ''
+                                $operation === 'edit' ? 'Leave blank if you do not want to change the password.' : ''
                             ),
                     ]),
 

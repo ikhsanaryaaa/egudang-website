@@ -40,24 +40,24 @@ class StockMovementStatsWidget extends BaseWidget
         })->sum('qty');
 
         return [
-            Stat::make('Barang Masuk Hari Ini', number_format($stockInToday))
-                ->description('Unit masuk')
-                ->descriptionIcon('heroicon-m-arrow-down-tray')
+            Stat::make('Stock In Today', number_format($stockInToday))
+                ->description('Units incoming')
+                ->descriptionIcon('heroicon-m-arrow-down-tray', 'before')
                 ->color('success'),
 
-            Stat::make('Barang Keluar Hari Ini', number_format($stockOutToday))
-                ->description('Unit keluar')
-                ->descriptionIcon('heroicon-m-arrow-up-tray')
+            Stat::make('Stock Out Today', number_format($stockOutToday))
+                ->description('Units outgoing')
+                ->descriptionIcon('heroicon-m-arrow-up-tray', 'before')
                 ->color('danger'),
 
-            Stat::make('Masuk Bulan Ini', number_format($stockInMonth))
-                ->description('Total unit masuk')
-                ->descriptionIcon('heroicon-m-arrow-trending-up')
+            Stat::make('Stock In This Month', number_format($stockInMonth))
+                ->description('Total units incoming')
+                ->descriptionIcon('heroicon-m-arrow-trending-up', 'before')
                 ->color('success'),
 
-            Stat::make('Keluar Bulan Ini', number_format($stockOutMonth))
-                ->description('Total unit keluar')
-                ->descriptionIcon('heroicon-m-arrow-trending-down')
+            Stat::make('Stock Out This Month', number_format($stockOutMonth))
+                ->description('Total units outgoing')
+                ->descriptionIcon('heroicon-m-arrow-trending-down', 'before')
                 ->color('danger'),
         ];
     }
