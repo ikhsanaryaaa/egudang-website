@@ -20,6 +20,10 @@ class StockTransactionResource extends Resource
 
     protected static ?string $navigationLabel = 'Stock Transactions';
 
+    protected static ?string $pluralModelLabel = 'Stock Transactions';
+
+    protected static ?int $navigationSort = 5;
+
     public static function form(Form $form): Form
     {
         return $form

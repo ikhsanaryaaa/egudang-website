@@ -10,6 +10,8 @@ class ListStockTransactions extends ListRecords
 {
     protected static string $resource = StockTransactionResource::class;
 
+    protected ?string $heading = 'Stock Transactions';
+
     protected function getHeaderActions(): array
     {
         return [
