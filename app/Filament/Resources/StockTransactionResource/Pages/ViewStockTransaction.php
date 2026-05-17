@@ -39,9 +39,16 @@ class ViewStockTransaction extends ViewRecord
                 Infolists\Components\Section::make('Transaction Info')
                     ->schema([
                         Infolists\Components\TextEntry::make('transaction_number')
-                            ->label('No. Transaksi'),
+                            ->label('Transaction No.'),
                         Infolists\Components\TextEntry::make('type')
+                            ->label('Type')
                             ->badge()
+                            ->formatStateUsing(fn (string $state): string => match ($state) {
+                                'IN' => 'Stock In',
+                                'OUT' => 'Stock Out',
+                                'ADJ' => 'Stock Adjustment',
+                                default => $state,
+                            })
                             ->color(fn (string $state): string => match ($state) {
                                 'IN' => 'success',
                                 'OUT' => 'danger',
@@ -51,8 +58,10 @@ class ViewStockTransaction extends ViewRecord
                         Infolists\Components\TextEntry::make('creator.name')
                             ->label('Created By'),
                         Infolists\Components\TextEntry::make('created_at')
+                            ->label('Date')
                             ->dateTime(),
-                        Infolists\Components\TextEntry::make('notes'),
+                        Infolists\Components\TextEntry::make('notes')
+                            ->label('Notes'),
                     ])->columns(2),
 
                 Infolists\Components\Section::make('Transaction Items')

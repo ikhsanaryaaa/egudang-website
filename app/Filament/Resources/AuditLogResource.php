@@ -59,7 +59,7 @@ class AuditLogResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Waktu')
+                    ->label('Time')
                     ->dateTime('d M Y H:i:s')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('user.name')
@@ -83,14 +83,19 @@ class AuditLogResource extends Resource
                 Tables\Columns\TextColumn::make('action')
                     ->label('Action')
                     ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'Barang Masuk' => 'Stock In',
+                        'Barang Keluar' => 'Stock Out',
+                        default => $state,
+                    })
                     ->color(fn (string $state): string => match ($state) {
                         'Login' => 'gray',
                         'Logout' => 'gray',
                         'Create Data' => 'success',
                         'Update Data' => 'warning',
                         'Delete Data' => 'danger',
-                        'Barang Masuk' => 'success',
-                        'Barang Keluar' => 'danger',
+                        'Barang Masuk', 'Stock In' => 'success',
+                        'Barang Keluar', 'Stock Out' => 'danger',
                         'Upload File' => 'info',
                         'Delete File' => 'danger',
                         default => 'gray',
@@ -98,7 +103,7 @@ class AuditLogResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('description')
-                    ->label('Deskripsi')
+                    ->label('Description')
                     ->wrap()
                     ->limit(80)
                     ->searchable(),
@@ -121,17 +126,17 @@ class AuditLogResource extends Resource
                         'Create Data' => 'Create Data',
                         'Update Data' => 'Update Data',
                         'Delete Data' => 'Delete Data',
-                        'Barang Masuk' => 'Barang Masuk',
-                        'Barang Keluar' => 'Barang Keluar',
+                        'Barang Masuk' => 'Stock In',
+                        'Barang Keluar' => 'Stock Out',
                         'Upload File' => 'Upload File',
                         'Delete File' => 'Delete File',
                     ]),
                 Tables\Filters\Filter::make('created_at')
                     ->form([
                         Forms\Components\DatePicker::make('from')
-                            ->label('Dari Tanggal'),
+                            ->label('From Date'),
                         Forms\Components\DatePicker::make('until')
-                            ->label('Sampai Tanggal'),
+                            ->label('Until Date'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
@@ -147,10 +152,10 @@ class AuditLogResource extends Resource
                     ->indicateUsing(function (array $data): array {
                         $indicators = [];
                         if ($data['from'] ?? null) {
-                            $indicators['from'] = 'Dari: ' . \Carbon\Carbon::parse($data['from'])->format('d M Y');
+                            $indicators['from'] = 'From: ' . \Carbon\Carbon::parse($data['from'])->format('d M Y');
                         }
                         if ($data['until'] ?? null) {
-                            $indicators['until'] = 'Sampai: ' . \Carbon\Carbon::parse($data['until'])->format('d M Y');
+                            $indicators['until'] = 'Until: ' . \Carbon\Carbon::parse($data['until'])->format('d M Y');
                         }
                         return $indicators;
                     }),

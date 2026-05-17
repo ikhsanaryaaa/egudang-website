@@ -9,17 +9,18 @@ class ProductService
 {
     /**
      * Generate a unique SKU for a product.
-     * Format: AAA-PRODUCTNAME-UNIT-000
-     * Example: FF-CHAMP-NUGGET-500GR-001
+     * Format: AAA-PRODUCTNAME-BRAND-UNIT-000
+     * Example: FF-CHAMP-NUGGET-SAMSUNG-500GR-001
      *
      * @param int|null $categoryId
      * @param string|null $productName
+     * @param string|null $brand
      * @param string|null $unit
      * @return string|null
      */
-    public function generateSku(?int $categoryId = null, ?string $productName = null, ?string $unit = null): ?string
+    public function generateSku(?int $categoryId = null, ?string $productName = null, ?string $brand = null, ?string $unit = null): ?string
     {
-        if (!$categoryId || !$productName || !$unit) {
+        if (!$categoryId || !$productName || !$brand || !$unit) {
             return null;
         }
 
@@ -35,12 +36,17 @@ class ProductService
         $namePart = preg_replace('/\s+/', '-', $namePart);
         $namePart = preg_replace('/[^A-Z0-9\-]/', '', $namePart);
 
+        // Convert brand: "Samsung" -> "SAMSUNG"
+        $brandPart = strtoupper(trim($brand));
+        $brandPart = preg_replace('/\s+/', '-', $brandPart);
+        $brandPart = preg_replace('/[^A-Z0-9\-]/', '', $brandPart);
+
         // Convert unit: "500 Gr" -> "500GR"
         $unitPart = strtoupper(trim($unit));
         $unitPart = preg_replace('/\s+/', '', $unitPart);
         $unitPart = preg_replace('/[^A-Z0-9]/', '', $unitPart);
 
-        $prefix = $categoryCode . '-' . $namePart . '-' . $unitPart . '-';
+        $prefix = $categoryCode . '-' . $namePart . '-' . $brandPart . '-' . $unitPart . '-';
 
         $lastProduct = Product::where('sku', 'like', $prefix . '%')
             ->orderBy('sku', 'desc')

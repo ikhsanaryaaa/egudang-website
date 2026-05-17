@@ -31,6 +31,7 @@ class ProductResource extends Resource
                 Forms\Components\Section::make('Product Information')
                     ->schema([
                         Forms\Components\Select::make('category_id')
+                            ->label('Category')
                             ->relationship('category', 'name')
                             ->required()
                             ->searchable()
@@ -40,10 +41,12 @@ class ProductResource extends Resource
                                 $set('sku', app(ProductService::class)->generateSku(
                                     $state ? (int) $state : null,
                                     $get('name'),
+                                    $get('brand'),
                                     $get('unit'),
                                 ));
                             }),
                         Forms\Components\TextInput::make('name')
+                            ->label('Name')
                             ->required()
                             ->maxLength(255)
                             ->live(onBlur: true)
@@ -51,10 +54,25 @@ class ProductResource extends Resource
                                 $set('sku', app(ProductService::class)->generateSku(
                                     $get('category_id') ? (int) $get('category_id') : null,
                                     $state,
+                                    $get('brand'),
+                                    $get('unit'),
+                                ));
+                            }),
+                        Forms\Components\TextInput::make('brand')
+                            ->label('Brand')
+                            ->required()
+                            ->maxLength(255)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, ?string $state) {
+                                $set('sku', app(ProductService::class)->generateSku(
+                                    $get('category_id') ? (int) $get('category_id') : null,
+                                    $get('name'),
+                                    $state,
                                     $get('unit'),
                                 ));
                             }),
                         Forms\Components\TextInput::make('unit')
+                            ->label('Unit')
                             ->required()
                             ->placeholder('e.g. Pcs, Box, Kg')
                             ->maxLength(50)
@@ -63,6 +81,7 @@ class ProductResource extends Resource
                                 $set('sku', app(ProductService::class)->generateSku(
                                     $get('category_id') ? (int) $get('category_id') : null,
                                     $get('name'),
+                                    $get('brand'),
                                     $state,
                                 ));
                             }),
@@ -72,17 +91,20 @@ class ProductResource extends Resource
                             ->required()
                             ->unique(ignoreRecord: true),
                         Forms\Components\TextInput::make('barcode')
+                            ->label('Barcode')
                             ->maxLength(255),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Inventory Details')
                     ->schema([
                         Forms\Components\TextInput::make('stock')
+                            ->label('Stock')
                             ->numeric()
                             ->default(0)
                             ->required()
                             ->minValue(0),
                         Forms\Components\TextInput::make('minimum_stock')
+                            ->label('Minimum Stock')
                             ->numeric()
                             ->default(0)
                             ->required()
@@ -112,12 +134,12 @@ class ProductResource extends Resource
                             ->acceptedFileTypes(AttachmentService::getAcceptedFileTypes())
                             ->maxSize(10240)
                             ->maxFiles(5)
-                            ->helperText('Maks 10MB per file. Format: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG.'),
+                            ->helperText('Max 10MB per file. Formats: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG.'),
                         Forms\Components\Placeholder::make('existing_attachments')
-                            ->label('Dokumen Tersimpan')
+                            ->label('Saved Documents')
                             ->content(function (?Product $record) {
                                 if (!$record || $record->attachments->isEmpty()) {
-                                    return 'Belum ada dokumen.';
+                                    return 'No documents saved.';
                                 }
                                 $links = $record->attachments->map(function ($att) {
                                     $url = Storage::url($att->file_path);
@@ -134,7 +156,7 @@ class ProductResource extends Resource
                             ->label('QR Code Preview')
                             ->content(function (?Product $record) {
                                 if (!$record || !$record->qr_code_path) {
-                                    return 'QR Code akan dibuat otomatis setelah produk disimpan.';
+                                    return 'QR Code will be generated automatically after the product is saved.';
                                 }
                                 $url = Storage::url($record->qr_code_path);
                                 return new \Illuminate\Support\HtmlString(
@@ -145,7 +167,7 @@ class ProductResource extends Resource
                             ->label('Barcode Preview')
                             ->content(function (?Product $record) {
                                 if (!$record || !$record->barcode_image_path) {
-                                    return 'Barcode akan dibuat otomatis jika field barcode diisi.';
+                                    return 'Barcode will be generated automatically if the barcode field is filled.';
                                 }
                                 $url = Storage::url($record->barcode_image_path);
                                 return new \Illuminate\Support\HtmlString(
@@ -166,16 +188,20 @@ class ProductResource extends Resource
                     ->label('Image')
                     ->circular(),
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Name')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('category.name')
+                    ->label('Category')
                     ->badge()
                     ->sortable()
                     ->visibleFrom('md'),
                 Tables\Columns\TextColumn::make('stock')
+                    ->label('Stock')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('unit')
+                    ->label('Unit')
                     ->sortable()
                     ->visibleFrom('md'),
                 Tables\Columns\ImageColumn::make('qr_code_path')
@@ -193,6 +219,7 @@ class ProductResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('category')
+                    ->label('Category')
                     ->relationship('category', 'name'),
             ])
             ->actions([

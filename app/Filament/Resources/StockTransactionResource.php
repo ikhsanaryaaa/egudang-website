@@ -28,8 +28,8 @@ class StockTransactionResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('type')
                             ->options([
-                                'IN' => 'Barang Masuk',
-                                'OUT' => 'Barang Keluar',
+                                'IN' => 'Stock In',
+                                'OUT' => 'Stock Out',
                                 'ADJ' => 'Stock Adjustment',
                             ])
                             ->required()
@@ -57,13 +57,13 @@ class StockTransactionResource extends Resource
                             ->columns(2)
                             ->minItems(1)
                             ->defaultItems(1)
-                            ->addActionLabel('Tambah Produk'),
+                            ->addActionLabel('Add Product'),
                     ]),
 
                 Forms\Components\Section::make('Documents')
                     ->schema([
                         Forms\Components\FileUpload::make('attachments_upload')
-                            ->label('Lampiran Dokumen')
+                            ->label('Document Attachments')
                             ->multiple()
                             ->directory('attachments/stocktransaction')
                             ->disk('public')
@@ -71,7 +71,7 @@ class StockTransactionResource extends Resource
                             ->acceptedFileTypes(AttachmentService::getAcceptedFileTypes())
                             ->maxSize(10240)
                             ->maxFiles(5)
-                            ->helperText('Maks 10MB per file. Format: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG.'),
+                            ->helperText('Max 10MB per file. Formats: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG.'),
                     ]),
             ]);
     }
@@ -81,11 +81,18 @@ class StockTransactionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('transaction_number')
-                    ->label('No. Transaksi')
+                    ->label('Transaction No.')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('type')
+                    ->label('Type')
                     ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'IN' => 'Stock In',
+                        'OUT' => 'Stock Out',
+                        'ADJ' => 'Stock Adjustment',
+                        default => $state,
+                    })
                     ->color(fn (string $state): string => match ($state) {
                         'IN' => 'success',
                         'OUT' => 'danger',
@@ -101,18 +108,21 @@ class StockTransactionResource extends Resource
                     ->label('Created By')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('notes')
+                    ->label('Notes')
                     ->limit(30)
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
+                    ->label('Date')
                     ->dateTime()
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('type')
+                    ->label('Type')
                     ->options([
-                        'IN' => 'Barang Masuk',
-                        'OUT' => 'Barang Keluar',
+                        'IN' => 'Stock In',
+                        'OUT' => 'Stock Out',
                         'ADJ' => 'Stock Adjustment',
                     ]),
             ])

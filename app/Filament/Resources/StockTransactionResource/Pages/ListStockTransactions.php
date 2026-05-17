@@ -14,7 +14,7 @@ class ListStockTransactions extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Tambah Transaksi'),
+                ->label('Add Transaction'),
         ];
     }
 }
