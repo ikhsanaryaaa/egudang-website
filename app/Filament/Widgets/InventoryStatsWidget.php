@@ -22,25 +22,25 @@ class InventoryStatsWidget extends BaseWidget
         $lowStockCount = Product::whereColumn('stock', '<=', 'minimum_stock')->count();
 
         return [
-            Stat::make('Total Produk', $totalProducts)
-                ->description('Produk terdaftar')
-                ->descriptionIcon('heroicon-m-cube')
+            Stat::make('Total Products', $totalProducts)
+                ->description('Registered products')
+                ->descriptionIcon('heroicon-m-cube', 'before')
                 ->color('primary')
                 ->chart([7, 3, 4, 5, 6, 3, 5]),
 
-            Stat::make('Total Kategori', $totalCategories)
-                ->description('Kategori produk')
-                ->descriptionIcon('heroicon-m-tag')
+            Stat::make('Total Categories', $totalCategories)
+                ->description('Product categories')
+                ->descriptionIcon('heroicon-m-tag', 'before')
                 ->color('info'),
 
-            Stat::make('Total Stok', number_format($totalStock))
-                ->description('Unit di seluruh gudang')
-                ->descriptionIcon('heroicon-m-archive-box')
+            Stat::make('Total Stock', number_format($totalStock))
+                ->description('Units across warehouse')
+                ->descriptionIcon('heroicon-m-archive-box', 'before')
                 ->color('success'),
 
             Stat::make('Low Stock', $lowStockCount)
-                ->description('Produk di bawah minimum')
-                ->descriptionIcon('heroicon-m-exclamation-triangle')
+                ->description('Products below minimum stock')
+                ->descriptionIcon('heroicon-m-exclamation-triangle', 'before')
                 ->color($lowStockCount > 0 ? 'danger' : 'success'),
         ];
     }

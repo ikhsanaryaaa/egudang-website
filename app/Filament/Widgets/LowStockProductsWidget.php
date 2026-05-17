@@ -9,7 +9,7 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class LowStockProductsWidget extends BaseWidget
 {
-    protected static ?string $heading = 'Produk Stok Rendah';
+    protected static ?string $heading = 'Low Stock Products';
 
     protected static ?int $sort = 3;
 
@@ -28,20 +28,20 @@ class LowStockProductsWidget extends BaseWidget
                     ->label('SKU')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nama Produk')
+                    ->label('Product Name')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('category.name')
-                    ->label('Kategori')
+                    ->label('Category')
                     ->badge(),
                 Tables\Columns\TextColumn::make('stock')
-                    ->label('Stok')
+                    ->label('Stock')
                     ->numeric()
                     ->color('danger'),
                 Tables\Columns\TextColumn::make('minimum_stock')
-                    ->label('Minimum')
+                    ->label('Minimum Stock')
                     ->numeric(),
                 Tables\Columns\TextColumn::make('unit')
-                    ->label('Satuan'),
+                    ->label('Unit'),
             ])
             ->paginated([5]);
     }

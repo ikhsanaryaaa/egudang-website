@@ -9,7 +9,7 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class RecentTransactionsWidget extends BaseWidget
 {
-    protected static ?string $heading = 'Transaksi Terbaru';
+    protected static ?string $heading = 'Recent Transactions';
 
     protected static ?int $sort = 4;
 
@@ -25,11 +25,17 @@ class RecentTransactionsWidget extends BaseWidget
             )
             ->columns([
                 Tables\Columns\TextColumn::make('transaction_number')
-                    ->label('No. Transaksi')
+                    ->label('Transaction No.')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('type')
-                    ->label('Tipe')
+                    ->label('Type')
                     ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'IN' => 'Stock In',
+                        'OUT' => 'Stock Out',
+                        'ADJ' => 'Stock Adjustment',
+                        default => $state,
+                    })
                     ->color(fn (string $state): string => match ($state) {
                         'IN' => 'success',
                         'OUT' => 'danger',
@@ -42,10 +48,10 @@ class RecentTransactionsWidget extends BaseWidget
                 Tables\Columns\TextColumn::make('creator.name')
                     ->label('User'),
                 Tables\Columns\TextColumn::make('notes')
-                    ->label('Catatan')
+                    ->label('Notes')
                     ->limit(30),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Tanggal')
+                    ->label('Date')
                     ->dateTime()
                     ->sortable(),
             ])
