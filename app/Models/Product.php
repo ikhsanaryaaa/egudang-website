@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Services\QrService;
 use App\Services\BarcodeService;
+use App\Traits\HasAuditLog;
 
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, HasAuditLog;
 
     protected $fillable = [
         'category_id',

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Attachment;
+use App\Services\Audit\AuditService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -10,6 +11,12 @@ use Illuminate\Support\Str;
 
 class AttachmentService
 {
+    protected AuditService $auditService;
+
+    public function __construct(AuditService $auditService)
+    {
+        $this->auditService = $auditService;
+    }
     /**
      * Allowed file extensions.
      */
@@ -60,7 +67,7 @@ class AttachmentService
         $directory = 'attachments/' . strtolower(class_basename($attachable)) . '/' . $attachable->id;
         $path = $file->storeAs($directory, $sanitizedName, 'public');
 
-        return Attachment::create([
+        $attachment = Attachment::create([
             'attachable_id' => $attachable->id,
             'attachable_type' => get_class($attachable),
             'file_path' => $path,
@@ -69,6 +76,17 @@ class AttachmentService
             'file_size' => $file->getSize(),
             'uploaded_by' => $userId,
         ]);
+
+        // Audit log for file upload
+        $attachableType = class_basename($attachable);
+        $this->auditService->log(
+            module: 'File',
+            action: 'Upload File',
+            description: "Uploaded file '{$originalName}' ({$extension}, {$file->getSize()} bytes) as attachment for {$attachableType} ID {$attachable->id}.",
+            userId: $userId
+        );
+
+        return $attachment;
     }
 
     /**
@@ -98,6 +116,14 @@ class AttachmentService
      */
     public function delete(Attachment $attachment): void
     {
+        // Audit log before deletion
+        $attachableType = class_basename($attachment->attachable_type);
+        $this->auditService->log(
+            module: 'File',
+            action: 'Delete File',
+            description: "Deleted file '{$attachment->file_name}' from {$attachableType} ID {$attachment->attachable_id}."
+        );
+
         if (Storage::disk('public')->exists($attachment->file_path)) {
             Storage::disk('public')->delete($attachment->file_path);
         }

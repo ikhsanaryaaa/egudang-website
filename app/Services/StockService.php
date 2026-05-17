@@ -7,11 +7,18 @@ use App\Models\InventoryBatchUsage;
 use App\Models\Product;
 use App\Models\StockTransaction;
 use App\Models\StockTransactionItem;
+use App\Services\Audit\AuditService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class StockService
 {
+    protected AuditService $auditService;
+
+    public function __construct(AuditService $auditService)
+    {
+        $this->auditService = $auditService;
+    }
     /**
      * Generate a unique transaction number.
      * Format: TRX-YYYYMMDD-XXXX
@@ -57,8 +64,8 @@ class StockService
      */
     public function processTransaction(string $type, array $items, ?string $notes, int $userId): StockTransaction
     {
-        return DB::transaction(function () use ($type, $items, $notes, $userId) {
-            $transaction = StockTransaction::create([
+        $transaction = DB::transaction(function () use ($type, $items, $notes, $userId) {
+            $txn = StockTransaction::create([
                 'transaction_number' => $this->generateTransactionNumber($type),
                 'type' => $type,
                 'notes' => $notes,
@@ -86,7 +93,7 @@ class StockService
 
                 // Create transaction item
                 $transactionItem = StockTransactionItem::create([
-                    'stock_transaction_id' => $transaction->id,
+                    'stock_transaction_id' => $txn->id,
                     'product_id' => $product->id,
                     'qty' => abs($qty),
                     'before_stock' => $beforeStock,
@@ -112,8 +119,28 @@ class StockService
                 $product->updateQuietly(['stock' => $afterStock]);
             }
 
-            return $transaction->load('items.product');
+            return $txn->load('items.product');
         });
+
+        // Audit log after successful transaction
+        $actionLabel = match ($type) {
+            'IN' => 'Barang Masuk',
+            'OUT' => 'Barang Keluar',
+            'ADJ' => 'Update Data',
+            default => $type,
+        };
+
+        $itemCount = count($items);
+        $notesText = $notes ? " Notes: {$notes}" : '';
+
+        $this->auditService->log(
+            module: 'Stock',
+            action: $actionLabel,
+            description: "Processed {$actionLabel} Transaction {$transaction->transaction_number} containing {$itemCount} item(s).{$notesText}",
+            userId: $userId
+        );
+
+        return $transaction;
     }
 
     /**
