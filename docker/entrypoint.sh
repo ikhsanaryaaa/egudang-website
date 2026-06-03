@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 echo "==> Starting E-Gudang application..."
@@ -14,7 +14,10 @@ echo "==> Caching configuration..."
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-php artisan icons:cache
+
+# Cache icons (Filament)
+echo "==> Caching icons..."
+php artisan icons:cache || echo "==> Icons cache skipped (not available)"
 
 # Jalankan database migration
 echo "==> Running database migrations..."
@@ -22,7 +25,7 @@ php artisan migrate --force
 
 # Buat storage link
 echo "==> Creating storage link..."
-php artisan storage:link --force
+php artisan storage:link --force || echo "==> Storage link already exists"
 
 # Fix permissions
 echo "==> Fixing permissions..."
