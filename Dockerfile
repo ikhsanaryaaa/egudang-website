@@ -25,7 +25,7 @@ RUN npm run build
 # ============================================
 # Stage 2: PHP production image
 # ============================================
-FROM php:8.2-fpm-alpine AS production
+FROM php:8.4-fpm-alpine AS production
 
 # Install system dependencies
 RUN apk add --no-cache \
