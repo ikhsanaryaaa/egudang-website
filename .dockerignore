@@ -25,3 +25,4 @@ Homestead.json
 Homestead.yaml
 auth.json
 docker-compose.yml
+bootstrap/cache/*.php

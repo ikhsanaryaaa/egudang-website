@@ -9,10 +9,13 @@ if [ -z "$APP_KEY" ]; then
     php artisan key:generate --force
 fi
 
+# Clear any stale route cache (Filament routes are dynamic, must not be cached)
+echo "==> Clearing route cache..."
+php artisan route:clear
+
 # Cache konfigurasi untuk production
 echo "==> Caching configuration..."
 php artisan config:cache
-php artisan route:cache
 php artisan view:cache
 
 # Cache icons (Filament)
