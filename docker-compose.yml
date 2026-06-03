@@ -1,0 +1,79 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: egudang-app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      APP_NAME: "E-Gudang"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: "http://localhost:8080"
+      LOG_CHANNEL: stack
+      LOG_LEVEL: error
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: e_gudang
+      DB_USERNAME: egudang
+      DB_PASSWORD: egudang_secret
+      BROADCAST_DRIVER: log
+      CACHE_DRIVER: file
+      FILESYSTEM_DISK: public
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: file
+      SESSION_LIFETIME: 120
+    volumes:
+      - app_storage:/var/www/html/storage/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - egudang-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: egudang-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: e_gudang
+      POSTGRES_USER: egudang
+      POSTGRES_PASSWORD: egudang_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U egudang -d e_gudang"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - egudang-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: egudang-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - egudang-network
+
+volumes:
+  postgres_data:
+    driver: local
+  app_storage:
+    driver: local
+
+networks:
+  egudang-network:
+    driver: bridge
