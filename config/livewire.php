@@ -127,7 +127,7 @@ return [
     |
     */
 
-    'asset_url' => env('APP_URL', 'https://e-gudang.my.id') . '/vendor',
+    'asset_url' => str_replace('http://', 'https://', env('APP_URL', 'https://e-gudang.my.id')) . '/vendor/livewire/livewire.js',
 
     /*
     |---------------------------------------------------------------------------
