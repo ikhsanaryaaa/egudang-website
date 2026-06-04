@@ -37,21 +37,21 @@ class RoleAndPermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
         // create roles and assign existing permissions
 
         // Super Admin role
-        $roleSuperAdmin = Role::create(['name' => 'Super Admin']);
+        $roleSuperAdmin = Role::firstOrCreate(['name' => 'Super Admin']);
         $roleSuperAdmin->givePermissionTo(Permission::all());
 
         // Manager role
-        $roleManager = Role::create(['name' => 'Manager']);
+        $roleManager = Role::firstOrCreate(['name' => 'Manager']);
         $roleManager->givePermissionTo(Permission::all());
 
         // Kepala Gudang role
-        $roleKepalaGudang = Role::create(['name' => 'Kepala Gudang']);
+        $roleKepalaGudang = Role::firstOrCreate(['name' => 'Kepala Gudang']);
         $roleKepalaGudang->givePermissionTo([
             'view products',
             'create products',
@@ -69,7 +69,7 @@ class RoleAndPermissionSeeder extends Seeder
         ]);
 
         // Operator Gudang role
-        $roleOperatorGudang = Role::create(['name' => 'Operator Gudang']);
+        $roleOperatorGudang = Role::firstOrCreate(['name' => 'Operator Gudang']);
         $roleOperatorGudang->givePermissionTo([
             'view products',
             'view categories',
