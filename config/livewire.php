@@ -127,7 +127,7 @@ return [
     |
     */
 
-    'asset_url' => '/vendor',
+    'asset_url' => env('APP_URL', 'https://e-gudang.my.id') . '/vendor',
 
     /*
     |---------------------------------------------------------------------------
