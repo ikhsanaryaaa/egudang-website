@@ -26,6 +26,10 @@ php artisan icons:cache || echo "==> Icons cache skipped (not available)"
 echo "==> Running database migrations..."
 php artisan migrate --force
 
+# Jalankan seeder untuk initial data (roles, permissions, default admins)
+echo "==> Seeding database..."
+php artisan db:seed --force
+
 # Buat storage link
 echo "==> Creating storage link..."
 php artisan storage:link --force || echo "==> Storage link already exists"
