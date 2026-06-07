@@ -1,66 +1,198 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# E-Gudang
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi **inventory management** berbasis web untuk mengelola produk, kategori, transaksi stok (barang masuk/keluar), dokumen inventory, serta reporting gudang. Dibangun dengan Laravel dan Filament Admin Panel, dengan sistem role & permission yang fleksibel.
 
-## About Laravel
+🔗 **Production**: [https://e-gudang.my.id](https://e-gudang.my.id)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Fitur Utama
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Authentication & RBAC** — Login/logout dengan role & permission berbasis [spatie/laravel-permission](https://spatie.be/docs/laravel-permission).
+- **User Management** — CRUD user, assign role, dan reset password.
+- **Category Management** — CRUD kategori dengan kode unik per kategori.
+- **Product Management** — CRUD produk, upload gambar, search & filter, serta **SKU generator** otomatis (format `KODE-BRAND-NAMA-UNIT-000`).
+- **Stock Transaction** — Pencatatan barang masuk, barang keluar, dan stock adjustment dengan histori transaksi. Stok tidak boleh negatif.
+- **File Upload** — Upload multiple dokumen (PDF, DOC/DOCX, XLS/XLSX, JPG/PNG) sebagai lampiran produk (Surat Jalan, Invoice, PO, dll).
+- **Dashboard** — Ringkasan total produk, low stock, stok masuk/keluar hari ini, dan recent activity.
+- **Reporting** — Export laporan stok ke **Excel** dan **PDF**, termasuk laporan low stock.
+- **Audit Log** — Pencatatan otomatis aktivitas Create, Update, dan Delete pada modul utama.
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Tech Stack
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+| Komponen | Teknologi |
+|---|---|
+| Backend Framework | Laravel 11 (PHP 8.2+) |
+| Admin Panel | Filament 3.2 |
+| Database | MySQL / MariaDB |
+| Authorization | spatie/laravel-permission |
+| Excel Export | maatwebsite/excel |
+| PDF Export | barryvdh/laravel-dompdf |
+| Frontend Build | Vite + TailwindCSS + Alpine.js |
+| Deployment | Docker + Coolify (Nginx + PHP-FPM) |
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## Role & Permission
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+| Module | Manager | Kepala Gudang | Operator Gudang |
+|---|---|---|---|
+| Tracking Barang | Read | Read, Update | CRUD |
+| Manage User | CRUD | CRUD | No Access |
+| Manage Category | Read | CRUD | CRUD |
+| Manage Product | Read | Read | CRUD |
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## Requirements
 
-## Contributing
+- PHP >= 8.2 (production menggunakan PHP 8.4)
+- Composer 2.x
+- Node.js >= 18 & npm
+- MySQL 8.x / MariaDB 10.x
+- Ekstensi PHP: `gd`, `pdo_mysql`, `mbstring`, `zip`, `bcmath`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## Instalasi Lokal
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+# 1. Clone repository
+git clone https://github.com/ikhsanaryaaa/egudang-website.git
+cd egudang-website
 
-## Security Vulnerabilities
+# 2. Install dependency PHP
+composer install
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# 3. Install dependency frontend
+npm install
 
-## License
+# 4. Setup environment
+cp .env.example .env
+php artisan key:generate
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# 5. Konfigurasi database di .env, lalu jalankan migration + seeder
+php artisan migrate --seed
+
+# 6. Symlink storage (agar file upload bisa diakses publik)
+php artisan storage:link
+
+# 7. Build assets & jalankan server
+npm run dev
+php artisan serve
+```
+
+Aplikasi dapat diakses di `http://localhost:8000` dan admin panel di `http://localhost:8000/admin`.
+
+### Default Seeder
+
+Seeder `RoleAndPermissionSeeder` akan membuat role & permission dasar. Sesuaikan kredensial admin awal pada seeder sebelum menjalankan `php artisan db:seed` di environment baru.
+
+---
+
+## Konfigurasi Environment
+
+Variabel penting pada `.env`:
+
+```env
+APP_NAME=E-Gudang
+APP_ENV=production
+APP_URL=https://e-gudang.my.id
+
+DB_CONNECTION=mysql
+DB_HOST=...
+DB_PORT=3306
+DB_DATABASE=egudang
+DB_USERNAME=...
+DB_PASSWORD=...
+
+FILESYSTEM_DISK=public
+```
+
+> [!IMPORTANT]
+> Di production, pastikan `APP_URL` di-set ke `https://e-gudang.my.id` agar Filament & Livewire meng-generate URL asset dengan skema HTTPS yang benar di belakang reverse proxy Coolify.
+
+---
+
+## Deployment dengan Coolify
+
+Aplikasi ini di-deploy menggunakan **Coolify** dengan build berbasis `Dockerfile` (Nginx + PHP-FPM) dan domain **e-gudang.my.id**.
+
+### 1. Konfigurasi Aplikasi di Coolify
+
+- **Source**: Git repository `ikhsanaryaaa/egudang-website`, branch `main`.
+- **Build Pack**: Dockerfile.
+- **Port**: `80` (Nginx di dalam container).
+- **Domain**: `https://e-gudang.my.id` (aktifkan SSL/Let's Encrypt otomatis dari Coolify).
+
+### 2. Environment Variables
+
+Set seluruh variabel `.env` (lihat bagian di atas) pada tab **Environment Variables** di Coolify. Pastikan:
+
+- `APP_ENV=production`
+- `APP_DEBUG=false`
+- `APP_URL=https://e-gudang.my.id`
+- Kredensial database mengarah ke database service di Coolify.
+
+### 3. Persistent Storage
+
+> [!WARNING]
+> Tanpa persistent volume, semua file upload (gambar produk & dokumen) akan **hilang** setiap kali redeploy.
+
+Tambahkan **Persistent Storage** di Coolify yang me-mount direktori berikut:
+
+```text
+/var/www/html/storage/app/public
+```
+
+### 4. Migration & Setup
+
+Migration dan `storage:link` dijalankan otomatis melalui `docker/entrypoint.sh` saat container start. Jika perlu menjalankan manual, gunakan **Execute Command** di Coolify:
+
+```bash
+php artisan migrate --force
+php artisan storage:link
+php artisan optimize:clear
+```
+
+### 5. Catatan Reverse Proxy
+
+Coolify menggunakan reverse proxy (Traefik) yang meneruskan request via HTTP ke container. Middleware `TrustProxies` dan `APP_URL` HTTPS sudah dikonfigurasi agar:
+
+- Login POST request tidak ter-redirect ke HTTP GET.
+- Asset Livewire (`livewire.js`) ter-load dengan benar tanpa error 404.
+
+---
+
+## Struktur Direktori Penting
+
+```text
+app/
+├── Filament/Resources/    # Resource admin panel (Product, Category, User, dll)
+├── Models/                # Eloquent models
+├── Services/              # Business logic (ProductService untuk SKU, AttachmentService, dll)
+├── Traits/HasAuditLog.php # Auto audit logging untuk Create/Update/Delete
+└── Exports/               # Excel export classes
+
+database/
+├── migrations/            # Skema database
+└── seeders/               # RoleAndPermissionSeeder, dll
+
+docker/                    # Konfigurasi Docker (entrypoint, nginx, php-fpm)
+```
+
+---
+
+## Testing
+
+```bash
+php artisan test
+```
+
+---
+
+## Lisensi
+
+Aplikasi ini dibangun di atas framework Laravel yang berlisensi [MIT](https://opensource.org/licenses/MIT).
