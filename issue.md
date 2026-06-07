@@ -1,55 +1,142 @@
----
-name: Tech Stack Upgrade Plan
-about: Perencanaan major upgrade untuk PHP, Laravel, Filament, dan dependencies terkait
-title: 'Tech Debt: Major Stack Upgrade (PHP, Laravel, Filament)'
-labels: enhancement, tech-debt, major-upgrade
-assignees: ''
----
+# Penghapusan Fitur Barcode dan QR Code pada Modul Product
 
-## 🎯 Tujuan Utama (Objective)
+## Summary
 
-Melakukan *Major Upgrade* pada *Tech Stack* (teknologi dasar) aplikasi E-Gudang untuk memastikan keamanan, peningkatan performa, dan kompatibilitas jangka panjang. Implementasi ini akan berfokus pada pembaruan dari sisi *Server Environment* hingga *Framework Dependencies*.
+Saat ini setiap Product secara otomatis meng-generate **QR Code** (berisi SKU) dan **Barcode** (CODE_128 berdasarkan input field `barcode`) ketika data dibuat atau di-update. Gambar hasil generate disimpan ke storage (`qrcodes/` dan `barcodes/`) dan ditampilkan pada form Edit serta tabel list Product di admin panel.
 
-## 📋 Daftar Tugas (Task Checklist)
+Fitur ini akan **dihapus sepenuhnya** karena dianggap tidak lagi diperlukan. Penghapusan mencakup service generator, model lifecycle hooks, kolom database, elemen UI Filament, package dependency, serta file gambar yang sudah ter-generate di storage.
 
-Tahapan di bawah ini harus dieksekusi secara berurutan (*Sequential*):
+## Scope
 
-### 1. Upgrade PHP Environment (Laragon)
-- [ ] Unduh versi PHP terbaru (Disarankan minimal **PHP 8.2** atau **PHP 8.3**) versi *Thread Safe (TS)* dari repositori resmi PHP untuk Windows.
-- [ ] Ekstrak dan masukkan *folder* tersebut ke dalam direktori instalasi Laragon (`C:\laragon\bin\php\`).
-- [ ] Ubah versi PHP aktif melalui antarmuka Laragon (*Right-click Laragon Tray* -> *Menu* -> *PHP* -> *Version*).
-- [ ] Pastikan semua *PHP Extensions* krusial (seperti `pdo_pgsql`, `gd`, `zip`, `mbstring`, `intl`) telah di-*uncomment* dan diaktifkan di dalam file `php.ini` versi baru tersebut.
-- [ ] Lakukan verifikasi di *Terminal* dengan menjalankan perintah `php -v` dan pastikan versi yang tampil sudah yang terbaru.
+Perubahan ini menghapus seluruh logika dan artefak yang berkaitan dengan barcode dan QR code:
 
-### 2. Upgrade Laravel Framework
-- [ ] Buka file `composer.json` dan perbarui *Version Constraint* untuk *package* `laravel/framework` ke versi mayor terbaru (misalnya dari `^10.0` menuju `^11.0` atau `^12.0`).
-- [ ] Perbarui juga *Version Constraint* untuk dependensi bawaan dan pihak ketiga (seperti `laravel/sanctum`, `laravel/tinker`, `spatie/laravel-permission`, `barryvdh/laravel-dompdf`, dan `maatwebsite/excel`) agar terjamin *Compatible* dengan versi Laravel yang baru.
-- [ ] Baca secara detail **Laravel Upgrade Guide** dari dokumentasi resmi untuk menangani potensi *Breaking Changes* (terutama yang berkaitan dengan struktur *Middleware*, *Routing*, dan *Exception Handling*).
-- [ ] Jalankan perintah `composer update -W` (atau `composer update --with-all-dependencies`) untuk menginstal *package* yang baru.
+| Area | Yang Dihapus |
+|---|---|
+| Services | `QrService.php`, `BarcodeService.php` |
+| Model | Lifecycle hooks (`created`, `updated`, `deleting`) untuk QR/barcode, fillable `barcode`, `qr_code_path`, `barcode_image_path` |
+| Filament UI | Input field `barcode`, section preview "QR Code & Barcode", kolom tabel `qr_code_path` & `barcode_image_path` |
+| Database | Kolom `barcode`, `qr_code_path`, `barcode_image_path` pada tabel `products` |
+| Dependency | `endroid/qr-code`, `picqer/php-barcode-generator` |
+| Storage | Folder `storage/app/public/qrcodes/` dan `storage/app/public/barcodes/` |
 
-### 3. Upgrade Filament & UI Ecosystem
-- [ ] Pastikan *package* `filament/filament` dan sub-komponennya telah diarahkan ke versi stabil terbaru yang mendukung versi Laravel yang baru dipasang.
-- [ ] Setelah proses *composer update* selesai, wajib menjalankan perintah `php artisan filament:upgrade` untuk membersihkan dan mempublikasikan *Assets* terbaru dari Filament.
-- [ ] Jalankan *Cache Clearing* secara menyeluruh dengan perintah `php artisan optimize:clear` dan `php artisan view:clear` untuk menghindari masalah *Stale Views*.
+> Fitur **SKU** (`ProductService::generateSku`) **TIDAK** dihapus karena merupakan identitas produk yang berdiri sendiri dan tidak bergantung pada QR/barcode.
 
-### 4. Testing & Verification
-- [ ] Jalankan aplikasi menggunakan *Local Development Server* (`php artisan serve`). Pastikan tidak terdapat *Fatal Error* atau *Deprecation Warnings* yang *blocking* di layar maupun di *Log* (`storage/logs/laravel.log`).
-- [ ] Lakukan *Manual Testing* pada fungsi-fungsi sistem esensial:
-  - *Authentication Flow* (Login, Logout, RBAC/Roles).
-  - Operasi *CRUD* di seluruh modul utama (*Products*, *Categories*, *Stock Transactions*, *Users*).
-  - Komponen Generator: Pembuatan dan *Render* Barcode serta QR Code.
-  - Modul Ekspor: Pembuatan dokumen PDF dan laporan berformat Excel.
-- [ ] Jika terjadi *Error* akibat fungsi pihak ketiga yang usang (*Deprecated Methods*), lakukan modifikasi kode pada level *Controller* atau *Service* untuk menyesuaikan standar baru.
+## Tahapan Implementasi (Steps)
 
-## ⚠️ Catatan Penting (Important Notes)
+### 1. Hapus Service Generator
 
-- **Database Backup:** Wajib melakukan pencadangan (*Backup*) *Database* PostgreSQL secara penuh sebelum memulai tahapan *Upgrade* ini.
-- **Git Branching:** Lakukan semua pekerjaan ini di dalam *Git Branch* terpisah (misal: `feature/upgrade-stack-2026`) untuk menghindari kerusakan sistem pada *branch* `main`.
-- **Dependency Conflicts:** Jika terjadi benturan dependensi pada saat menjalankan Composer, jangan menghapus folder `vendor` secara paksa sebelum mencoba menyelesaikan versi *package* yang bermasalah (*Troubleshoot Conflict*). Jika ada *package* yang sudah mati (*Abandoned*), carilah *Library* alternatif.
+- Hapus file `app/Services/QrService.php`
+- Hapus file `app/Services/BarcodeService.php`
 
-## ✅ Progress Update (18 Mei 2026)
+### 2. Bersihkan Model `Product.php`
 
-- **Filament Upgrade:** Berhasil di-upgrade ke versi `v3.3.50`.
-- **Security Patch:** Berhasil menjalankan `composer audit` dan memperbaiki 5 *vulnerabilities* (*CVE*) yang ditemukan pada *package* `phpoffice/phpspreadsheet` dengan melakukan instalasi versi yang aman.
-- **PHP 8.5 Fix:** Telah memperbaiki *Deprecation Warning* pada konstanta `PDO::MYSQL_ATTR_SSL_CA` (diubah menjadi `Pdo\Mysql::ATTR_SSL_CA`) pada konfigurasi *database* (`config/database.php` dan *vendor*).
-- **Composer Update:** Telah melakukan `composer self-update` untuk menangani *warning* deprecation usang yang berasal dari aplikasi Composer di lingkungan PHP 8.5.
+- Hapus `use App\Services\QrService;` dan `use App\Services\BarcodeService;`
+- Hapus entry `'barcode'`, `'qr_code_path'`, `'barcode_image_path'` dari array `$fillable`
+- Pada method `boot()`:
+  - Hapus blok generate QR & barcode di dalam `static::created()`
+  - Hapus blok regenerate/delete QR & barcode di dalam `static::updated()`
+  - Hapus blok delete QR & barcode di dalam `static::deleting()`
+- Jika setelah penghapusan method `boot()` menjadi kosong, hapus method tersebut sepenuhnya.
+
+### 3. Bersihkan `ProductResource.php` (Filament)
+
+- Hapus `use App\Services\QrService;` (pastikan tidak dipakai di tempat lain pada file ini)
+- Hapus `Forms\Components\TextInput::make('barcode')` pada section Product Information
+- Hapus seluruh `Forms\Components\Section::make('QR Code & Barcode')` beserta isinya (placeholder `qr_preview` dan `barcode_preview`)
+- Hapus kolom tabel `Tables\Columns\ImageColumn::make('qr_code_path')`
+- Hapus kolom tabel `Tables\Columns\ImageColumn::make('barcode_image_path')`
+
+### 4. Buat Migration untuk Drop Kolom
+
+- Buat migration baru, contoh: `drop_barcode_and_qr_columns_from_products_table`
+- Pada method `up()`: drop kolom `barcode`, `qr_code_path`, `barcode_image_path`
+- Pada method `down()`: tambahkan kembali ketiga kolom agar migration tetap reversible
+
+```php
+public function up(): void
+{
+    Schema::table('products', function (Blueprint $table) {
+        $table->dropColumn(['barcode', 'qr_code_path', 'barcode_image_path']);
+    });
+}
+
+public function down(): void
+{
+    Schema::table('products', function (Blueprint $table) {
+        $table->string('barcode')->nullable()->after('sku');
+        $table->string('qr_code_path')->nullable()->after('image_path');
+        $table->string('barcode_image_path')->nullable()->after('qr_code_path');
+    });
+}
+```
+
+> Catatan: migration lama (`add_qr_code_path...`, `add_barcode_image_path...`, dan kolom `barcode` pada `create_products_table`) **dibiarkan apa adanya** untuk menjaga history migration. Penghapusan kolom cukup lewat migration baru.
+
+### 5. Hapus Package Dependency
+
+- Jalankan: `composer remove endroid/qr-code picqer/php-barcode-generator`
+- Pastikan tidak ada referensi lain ke kedua package tersebut sebelum dihapus.
+
+### 6. Bersihkan File Storage
+
+- Hapus folder `storage/app/public/qrcodes/` dan `storage/app/public/barcodes/` beserta isinya (gambar yang sudah ter-generate)
+- Di production (Coolify/VPS), hapus juga folder yang sama pada persistent volume.
+
+### 7. Jalankan Migration & Clear Cache
+
+- `php artisan migrate`
+- `php artisan optimize:clear` (clear config, route, view, cache)
+
+### 8. Testing Manual
+
+- Login ke admin panel (`/admin/login`)
+- Buka List Products → pastikan kolom QR dan Barcode sudah hilang
+- Buat Product baru → pastikan tidak ada input `barcode` dan tidak ada error saat save
+- Edit Product → pastikan section "QR Code & Barcode" sudah tidak muncul
+- Hapus Product → pastikan proses delete berjalan normal tanpa error
+- Pastikan generate SKU tetap berfungsi normal
+
+## Expected Result
+
+- Form Create/Edit Product tidak lagi menampilkan input `barcode` maupun preview QR/Barcode
+- Tabel list Product tidak lagi menampilkan kolom QR dan Barcode
+- Tabel `products` tidak lagi memiliki kolom `barcode`, `qr_code_path`, `barcode_image_path`
+- Tidak ada lagi proses generate gambar saat create/update Product
+- Package `endroid/qr-code` dan `picqer/php-barcode-generator` terhapus dari `composer.json` dan `composer.lock`
+- Fitur SKU tetap berjalan normal tanpa terpengaruh
+- Tidak ada error/exception di seluruh flow Create, Edit, dan Delete Product
+
+## Features
+
+- Penyederhanaan modul Product dengan menghilangkan dependency generator gambar
+- Pengurangan ukuran storage karena tidak ada lagi file QR/barcode yang ter-generate
+- Skema database lebih ramping (3 kolom dihapus)
+- Berkurangnya dependency eksternal sehingga maintenance lebih ringan
+
+## Related Modules
+
+- Filament Admin Panel (v3.x) — `ProductResource`
+- Eloquent Model lifecycle (`App\Models\Product`)
+- Laravel Storage (disk `public`)
+- Database Migration (tabel `products`)
+
+## Related Files
+
+| File | Aksi |
+|---|---|
+| `app/Services/QrService.php` | Hapus file |
+| `app/Services/BarcodeService.php` | Hapus file |
+| `app/Models/Product.php` | Hapus import, fillable, dan lifecycle hooks QR/barcode |
+| `app/Filament/Resources/ProductResource.php` | Hapus input field, section preview, dan kolom tabel |
+| `database/migrations/xxxx_drop_barcode_and_qr_columns_from_products_table.php` | File migration baru |
+| `composer.json` | Hapus dependency `endroid/qr-code` & `picqer/php-barcode-generator` |
+| `storage/app/public/qrcodes/` | Hapus folder beserta isinya |
+| `storage/app/public/barcodes/` | Hapus folder beserta isinya |
+
+## Notes
+
+- **Backup database** sebelum menjalankan migration drop kolom, karena penghapusan kolom bersifat destruktif dan akan menghilangkan data `barcode` yang tersimpan.
+- Verifikasi ulang tidak ada referensi `qr_code_path`, `barcode_image_path`, `barcode`, `QrService`, atau `BarcodeService` yang tersisa di codebase (gunakan global search) sebelum commit.
+- Cek juga modul export (`ProductStockExport`, `LowStockExport`) untuk memastikan tidak ada kolom barcode/QR yang direferensikan — berdasarkan pengecekan saat ini tidak ditemukan, namun tetap konfirmasi setelah perubahan.
+- Setelah deploy ke production, jalankan `php artisan migrate` dan bersihkan persistent volume storage untuk folder `qrcodes/` dan `barcodes/`.
+- Estimasi waktu pengerjaan: **~30-45 menit** (termasuk testing).

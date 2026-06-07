@@ -36,8 +36,8 @@ trait HasAuditLog
                 return;
             }
 
-            // Skip if only auto-generated fields changed (e.g. QR/barcode paths)
-            $ignoredFields = ['qr_code_path', 'barcode_image_path', 'updated_at', 'created_at'];
+            // Skip if only auto-generated timestamp fields changed
+            $ignoredFields = ['updated_at', 'created_at'];
             $changes = collect($model->getChanges())->except($ignoredFields);
 
             if ($changes->isEmpty()) {
