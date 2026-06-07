@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 use App\Services\ProductService;
-use App\Services\QrService;
 use App\Services\AttachmentService;
 use Illuminate\Support\Facades\Storage;
 
@@ -94,9 +93,6 @@ class ProductResource extends Resource
                             ->readonly()
                             ->required()
                             ->unique(ignoreRecord: true),
-                        Forms\Components\TextInput::make('barcode')
-                            ->label('Barcode')
-                            ->maxLength(255),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Inventory Details')
@@ -153,34 +149,6 @@ class ProductResource extends Resource
                             })
                             ->visible(fn (?Product $record) => $record !== null),
                     ]),
-
-                Forms\Components\Section::make('QR Code & Barcode')
-                    ->schema([
-                        Forms\Components\Placeholder::make('qr_preview')
-                            ->label('QR Code Preview')
-                            ->content(function (?Product $record) {
-                                if (!$record || !$record->qr_code_path) {
-                                    return 'QR Code will be generated automatically after the product is saved.';
-                                }
-                                $url = Storage::url($record->qr_code_path);
-                                return new \Illuminate\Support\HtmlString(
-                                    '<img src="' . $url . '" alt="QR Code" style="width: 200px; height: 200px;" />'
-                                );
-                            }),
-                        Forms\Components\Placeholder::make('barcode_preview')
-                            ->label('Barcode Preview')
-                            ->content(function (?Product $record) {
-                                if (!$record || !$record->barcode_image_path) {
-                                    return 'Barcode will be generated automatically if the barcode field is filled.';
-                                }
-                                $url = Storage::url($record->barcode_image_path);
-                                return new \Illuminate\Support\HtmlString(
-                                    '<img src="' . $url . '" alt="Barcode" style="height: 80px;" />'
-                                );
-                            }),
-                    ])
-                    ->columns(2)
-                    ->visible(fn (?Product $record) => $record !== null),
             ]);
     }
 
@@ -207,20 +175,6 @@ class ProductResource extends Resource
                 Tables\Columns\TextColumn::make('unit')
                     ->label('Unit')
                     ->sortable()
-                    ->visibleFrom('md'),
-                Tables\Columns\ImageColumn::make('qr_code_path')
-                    ->label('QR')
-                    ->disk('public')
-                    ->width(40)
-                    ->height(40)
-                    ->extraImgAttributes(['style' => 'background:#fff; padding:4px; border-radius:6px;'])
-                    ->visibleFrom('md'),
-                Tables\Columns\ImageColumn::make('barcode_image_path')
-                    ->label('Barcode')
-                    ->disk('public')
-                    ->width(80)
-                    ->height(40)
-                    ->extraImgAttributes(['style' => 'background:#fff; padding:4px; border-radius:6px;'])
                     ->visibleFrom('md'),
             ])
             ->filters([
