@@ -111,6 +111,74 @@ class ProductResource extends Resource
                             ->minValue(0),
                     ])->columns(2),
 
+                Forms\Components\Section::make('EOQ Parameters')
+                    ->description('Parameter untuk perhitungan Economic Order Quantity, Reorder Point, dan Safety Stock.')
+                    ->schema([
+                        Forms\Components\TextInput::make('ordering_cost')
+                            ->label('Ordering Cost')
+                            ->helperText('Biaya per sekali pemesanan.')
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->default(0)
+                            ->minValue(0),
+                        Forms\Components\TextInput::make('holding_cost')
+                            ->label('Holding Cost')
+                            ->helperText('Biaya simpan per unit per tahun.')
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->default(0)
+                            ->minValue(0),
+                        Forms\Components\TextInput::make('lead_time_days')
+                            ->label('Lead Time')
+                            ->helperText('Estimasi hari dari order sampai barang diterima.')
+                            ->numeric()
+                            ->suffix('hari')
+                            ->default(0)
+                            ->minValue(0),
+                        Forms\Components\TextInput::make('safety_stock_days')
+                            ->label('Safety Stock Days')
+                            ->helperText('Buffer hari untuk safety stock.')
+                            ->numeric()
+                            ->suffix('hari')
+                            ->default(0)
+                            ->minValue(0),
+                        Forms\Components\Placeholder::make('eoq_result')
+                            ->label('Hasil Perhitungan EOQ')
+                            ->columnSpanFull()
+                            ->content(function (?Product $record) {
+                                if (!$record) {
+                                    return 'Simpan produk terlebih dahulu untuk melihat hasil perhitungan EOQ.';
+                                }
+
+                                $summary = app(\App\Services\EoqService::class)->getSummary($record);
+
+                                if (!$summary['is_configured']) {
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<span style="color:#d97706;">Ordering Cost dan Holding Cost belum dikonfigurasi. Isi kedua nilai tersebut untuk menghitung EOQ.</span>'
+                                    );
+                                }
+
+                                $rows = [
+                                    'Annual Demand (12 bulan terakhir)' => number_format($summary['annual_demand']) . ' ' . $record->unit,
+                                    'Average Daily Demand' => number_format($summary['average_daily_demand'], 2) . ' ' . $record->unit . '/hari',
+                                    'EOQ (jumlah order ekonomis)' => number_format($summary['eoq']) . ' ' . $record->unit,
+                                    'Safety Stock' => number_format($summary['safety_stock']) . ' ' . $record->unit,
+                                    'Reorder Point (ROP)' => number_format($summary['reorder_point']) . ' ' . $record->unit,
+                                ];
+
+                                $html = '<table style="width:100%;border-collapse:collapse;">';
+                                foreach ($rows as $label => $value) {
+                                    $html .= '<tr>'
+                                        . '<td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;color:#6b7280;">' . $label . '</td>'
+                                        . '<td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;font-weight:600;text-align:right;">' . $value . '</td>'
+                                        . '</tr>';
+                                }
+                                $html .= '</table>';
+
+                                return new \Illuminate\Support\HtmlString($html);
+                            }),
+                    ])->columns(2),
+
                 Forms\Components\Section::make('Media & Description')
                     ->schema([
                         Forms\Components\FileUpload::make('image_path')
@@ -176,6 +244,23 @@ class ProductResource extends Resource
                     ->label('Unit')
                     ->sortable()
                     ->visibleFrom('md'),
+                Tables\Columns\TextColumn::make('eoq')
+                    ->label('EOQ')
+                    ->state(fn (Product $record): string => ($eoq = app(\App\Services\EoqService::class)->calculateEoq($record)) > 0
+                        ? number_format($eoq)
+                        : '-')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('reorder_point')
+                    ->label('Reorder Point')
+                    ->state(function (Product $record): string {
+                        $rop = app(\App\Services\EoqService::class)->calculateReorderPoint($record);
+                        return $rop > 0 ? number_format($rop) : '-';
+                    })
+                    ->badge()
+                    ->color(fn (Product $record): string => $record->stock <= app(\App\Services\EoqService::class)->calculateReorderPoint($record)
+                        ? 'warning'
+                        : 'success')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('category')
