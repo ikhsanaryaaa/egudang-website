@@ -2,143 +2,120 @@
 
 namespace App\Services;
 
-use App\Models\Product;
-use App\Models\StockTransactionItem;
-use Carbon\Carbon;
-
 class EoqService
 {
     /**
-     * Jumlah hari dalam satu tahun untuk basis perhitungan demand.
+     * Divisor periode untuk konversi nilai tahunan ke basis periode.
+     * - bulanan => 12 (nilai tahunan dibagi 12)
+     * - tahunan => 1  (dipakai apa adanya)
      */
-    private const DAYS_PER_YEAR = 365;
-
-    /**
-     * Hitung total annual demand berdasarkan histori transaksi OUT
-     * dalam 12 bulan terakhir.
-     */
-    public function getAnnualDemand(Product $product): int
+    public function periodDivisor(string $periodType): int
     {
-        $oneYearAgo = Carbon::now()->subYear();
-
-        return (int) StockTransactionItem::where('product_id', $product->id)
-            ->whereHas('transaction', function ($query) use ($oneYearAgo) {
-                $query->where('type', 'OUT')
-                    ->where('created_at', '>=', $oneYearAgo);
-            })
-            ->sum('qty');
+        return $periodType === 'tahunan' ? 1 : 12;
     }
 
     /**
-     * Hitung rata-rata demand harian.
+     * Hitung demand per periode berdasarkan basis periode.
      */
-    public function getAverageDailyDemand(Product $product): float
+    public function computeDemandPerPeriod(int $demand, string $periodType): float
     {
-        return $this->computeAverageDailyDemand($this->getAnnualDemand($product));
+        return $demand / $this->periodDivisor($periodType);
     }
 
     /**
-     * Hitung Economic Order Quantity (EOQ) untuk sebuah produk.
+     * Hitung holding cost per periode berdasarkan basis periode.
      */
-    public function calculateEoq(Product $product): float
+    public function computeHoldingPerPeriod(float $holdingCost, string $periodType): float
     {
-        return $this->computeEoq(
-            $this->getAnnualDemand($product),
-            (float) $product->ordering_cost,
-            (float) $product->holding_cost,
-        );
-    }
-
-    /**
-     * Hitung Safety Stock untuk sebuah produk.
-     */
-    public function calculateSafetyStock(Product $product): float
-    {
-        return $this->computeSafetyStock(
-            $this->getAverageDailyDemand($product),
-            (int) $product->safety_stock_days,
-        );
-    }
-
-    /**
-     * Hitung Reorder Point (ROP) untuk sebuah produk.
-     */
-    public function calculateReorderPoint(Product $product): float
-    {
-        return $this->computeReorderPoint(
-            $this->getAverageDailyDemand($product),
-            (int) $product->lead_time_days,
-            $this->calculateSafetyStock($product),
-        );
-    }
-
-    // ---------------------------------------------------------------------
-    // Pure calculation methods (tanpa akses database) — mudah di-unit-test.
-    // ---------------------------------------------------------------------
-
-    /**
-     * Hitung rata-rata demand harian dari annual demand.
-     */
-    public function computeAverageDailyDemand(int $annualDemand): float
-    {
-        return $annualDemand / self::DAYS_PER_YEAR;
+        return $holdingCost / $this->periodDivisor($periodType);
     }
 
     /**
      * Hitung Economic Order Quantity (EOQ).
      *
-     * Formula: EOQ = sqrt((2 * D * S) / H)
-     * D = annual demand, S = ordering cost, H = holding cost.
+     * Formula: EOQ = sqrt((2 * Dp * S) / Hp)
+     * Dp = demand per periode, S = ordering cost, Hp = holding cost per periode.
      *
-     * Mengembalikan 0 jika demand, ordering cost, atau holding cost tidak
-     * valid (guard pembagian nol / parameter belum dikonfigurasi).
+     * Mengembalikan 0 jika input tidak valid (guard pembagian nol).
      */
-    public function computeEoq(int $demand, float $orderingCost, float $holdingCost): float
+    public function computeEoq(float $demandPerPeriod, float $orderingCost, float $holdingPerPeriod): float
     {
-        if ($demand <= 0 || $orderingCost <= 0 || $holdingCost <= 0) {
+        if ($demandPerPeriod <= 0 || $orderingCost <= 0 || $holdingPerPeriod <= 0) {
             return 0.0;
         }
 
-        return (float) ceil(sqrt((2 * $demand * $orderingCost) / $holdingCost));
-    }
-
-    /**
-     * Hitung Safety Stock.
-     *
-     * Formula: Safety Stock = Average Daily Demand * Safety Stock Days
-     */
-    public function computeSafetyStock(float $averageDailyDemand, int $safetyStockDays): float
-    {
-        return (float) ceil($averageDailyDemand * $safetyStockDays);
+        return round(sqrt((2 * $demandPerPeriod * $orderingCost) / $holdingPerPeriod), 2);
     }
 
     /**
      * Hitung Reorder Point (ROP).
      *
-     * Formula: ROP = (Average Daily Demand * Lead Time) + Safety Stock
+     * Formula: ROP = Demand per periode * Lead Time (hari).
      */
-    public function computeReorderPoint(float $averageDailyDemand, int $leadTimeDays, float $safetyStock): float
+    public function computeRop(float $demandPerPeriod, int $leadTimeDays): float
     {
-        return (float) ceil(($averageDailyDemand * $leadTimeDays) + $safetyStock);
+        return round($demandPerPeriod * $leadTimeDays, 2);
     }
 
     /**
-     * Ringkasan seluruh hasil perhitungan EOQ untuk dipakai pada UI.
+     * Hitung frekuensi pemesanan dalam periode.
      *
-     * @return array{annual_demand:int, average_daily_demand:float, eoq:float, safety_stock:float, reorder_point:float, is_configured:bool}
+     * Formula: F = Demand / EOQ.
      */
-    public function getSummary(Product $product): array
+    public function computeOrderFrequency(int $demand, float $eoq): float
     {
-        $orderingCost = (float) $product->ordering_cost;
-        $holdingCost = (float) $product->holding_cost;
+        if ($eoq <= 0) {
+            return 0.0;
+        }
+
+        return round($demand / $eoq, 2);
+    }
+
+    /**
+     * Hitung Total Inventory Cost (TIC).
+     *
+     * Formula: TIC = (D/EOQ) * S + (EOQ/2) * Hp.
+     */
+    public function computeTotalCost(int $demand, float $eoq, float $orderingCost, float $holdingPerPeriod): float
+    {
+        if ($eoq <= 0) {
+            return 0.0;
+        }
+
+        $orderingComponent = ($demand / $eoq) * $orderingCost;
+        $holdingComponent = ($eoq / 2) * $holdingPerPeriod;
+
+        return round($orderingComponent + $holdingComponent, 2);
+    }
+
+    /**
+     * Hitung seluruh hasil EOQ dari input transaksi.
+     *
+     * @param array{demand:int, ordering_cost:float, holding_cost:float, lead_time_days:int, period_type:string} $input
+     * @return array{demand_per_period:float, holding_per_period:float, eoq:float, rop:float, order_frequency:float, total_cost:float}
+     */
+    public function calculateAll(array $input): array
+    {
+        $demand = (int) ($input['demand'] ?? 0);
+        $orderingCost = (float) ($input['ordering_cost'] ?? 0);
+        $holdingCost = (float) ($input['holding_cost'] ?? 0);
+        $leadTimeDays = (int) ($input['lead_time_days'] ?? 0);
+        $periodType = $input['period_type'] ?? 'bulanan';
+
+        $demandPerPeriod = $this->computeDemandPerPeriod($demand, $periodType);
+        $holdingPerPeriod = $this->computeHoldingPerPeriod($holdingCost, $periodType);
+        $eoq = $this->computeEoq($demandPerPeriod, $orderingCost, $holdingPerPeriod);
+        $rop = $this->computeRop($demandPerPeriod, $leadTimeDays);
+        $orderFrequency = $this->computeOrderFrequency($demand, $eoq);
+        $totalCost = $this->computeTotalCost($demand, $eoq, $orderingCost, $holdingPerPeriod);
 
         return [
-            'annual_demand' => $this->getAnnualDemand($product),
-            'average_daily_demand' => round($this->getAverageDailyDemand($product), 2),
-            'eoq' => $this->calculateEoq($product),
-            'safety_stock' => $this->calculateSafetyStock($product),
-            'reorder_point' => $this->calculateReorderPoint($product),
-            'is_configured' => $orderingCost > 0 && $holdingCost > 0,
+            'demand_per_period' => round($demandPerPeriod, 2),
+            'holding_per_period' => round($holdingPerPeriod, 2),
+            'eoq' => $eoq,
+            'rop' => $rop,
+            'order_frequency' => $orderFrequency,
+            'total_cost' => $totalCost,
         ];
     }
 }

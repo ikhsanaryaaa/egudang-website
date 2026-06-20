@@ -23,14 +23,12 @@ class Product extends Model
         'ordering_cost',
         'holding_cost',
         'lead_time_days',
-        'safety_stock_days',
     ];
 
     protected $casts = [
         'ordering_cost' => 'decimal:2',
         'holding_cost' => 'decimal:2',
         'lead_time_days' => 'integer',
-        'safety_stock_days' => 'integer',
     ];
 
     public function category()
