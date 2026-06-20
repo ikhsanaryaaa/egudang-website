@@ -15,62 +15,100 @@ class EoqServiceTest extends TestCase
         $this->service = new EoqService();
     }
 
+    public function test_period_divisor(): void
+    {
+        $this->assertEquals(12, $this->service->periodDivisor('bulanan'));
+        $this->assertEquals(1, $this->service->periodDivisor('tahunan'));
+        // Default ke bulanan untuk nilai tak dikenal.
+        $this->assertEquals(12, $this->service->periodDivisor('mingguan'));
+    }
+
+    public function test_compute_demand_per_period(): void
+    {
+        $this->assertEquals(100.0, $this->service->computeDemandPerPeriod(1200, 'bulanan'));
+        $this->assertEquals(1200.0, $this->service->computeDemandPerPeriod(1200, 'tahunan'));
+    }
+
+    public function test_compute_holding_per_period(): void
+    {
+        $this->assertEquals(200.0, $this->service->computeHoldingPerPeriod(2400, 'bulanan'));
+        $this->assertEquals(2400.0, $this->service->computeHoldingPerPeriod(2400, 'tahunan'));
+    }
+
     public function test_compute_eoq_uses_classic_formula(): void
     {
-        // D = 1000, S = 10000, H = 500 => EOQ = sqrt((2*1000*10000)/500) = sqrt(40000) = 200
-        $this->assertEquals(200.0, $this->service->computeEoq(1000, 10000, 500));
+        // Dp = 100, S = 10000, Hp = 200 => EOQ = sqrt((2*100*10000)/200) = sqrt(10000) = 100
+        $this->assertEquals(100.0, $this->service->computeEoq(100, 10000, 200));
     }
 
-    public function test_compute_eoq_returns_zero_when_holding_cost_is_zero(): void
+    public function test_compute_eoq_returns_zero_when_holding_is_zero(): void
     {
-        $this->assertEquals(0.0, $this->service->computeEoq(1000, 10000, 0));
+        $this->assertEquals(0.0, $this->service->computeEoq(100, 10000, 0));
     }
 
-    public function test_compute_eoq_returns_zero_when_ordering_cost_is_zero(): void
+    public function test_compute_eoq_returns_zero_when_ordering_is_zero(): void
     {
-        $this->assertEquals(0.0, $this->service->computeEoq(1000, 0, 500));
+        $this->assertEquals(0.0, $this->service->computeEoq(100, 0, 200));
     }
 
     public function test_compute_eoq_returns_zero_when_no_demand(): void
     {
-        $this->assertEquals(0.0, $this->service->computeEoq(0, 10000, 500));
+        $this->assertEquals(0.0, $this->service->computeEoq(0, 10000, 200));
     }
 
-    public function test_compute_eoq_is_rounded_up(): void
+    public function test_compute_rop(): void
     {
-        // D = 1200, S = 100, H = 7 => sqrt((2*1200*100)/7) = sqrt(34285.7) ≈ 185.16 => ceil = 186
-        $this->assertEquals(186.0, $this->service->computeEoq(1200, 100, 7));
+        // Dp = 100, lead = 6 => ROP = 600
+        $this->assertEquals(600.0, $this->service->computeRop(100, 6));
     }
 
-    public function test_compute_average_daily_demand(): void
+    public function test_compute_order_frequency(): void
     {
-        // D = 365 => avg daily = 1
-        $this->assertEquals(1.0, $this->service->computeAverageDailyDemand(365));
-        // D = 730 => avg daily = 2
-        $this->assertEquals(2.0, $this->service->computeAverageDailyDemand(730));
+        // D = 1200, EOQ = 100 => 12
+        $this->assertEquals(12.0, $this->service->computeOrderFrequency(1200, 100));
     }
 
-    public function test_compute_safety_stock(): void
+    public function test_compute_order_frequency_returns_zero_when_eoq_zero(): void
     {
-        // avg daily = 1, safety_stock_days = 5 => safety stock = 5
-        $this->assertEquals(5.0, $this->service->computeSafetyStock(1.0, 5));
+        $this->assertEquals(0.0, $this->service->computeOrderFrequency(1200, 0));
     }
 
-    public function test_compute_safety_stock_is_rounded_up(): void
+    public function test_compute_total_cost(): void
     {
-        // avg daily = 1.5, safety_stock_days = 3 => 4.5 => ceil = 5
-        $this->assertEquals(5.0, $this->service->computeSafetyStock(1.5, 3));
+        // D=1200, EOQ=100, S=10000, Hp=200
+        // TIC = (1200/100)*10000 + (100/2)*200 = 120000 + 10000 = 130000
+        $this->assertEquals(130000.0, $this->service->computeTotalCost(1200, 100, 10000, 200));
     }
 
-    public function test_compute_reorder_point(): void
+    public function test_calculate_all_bulanan(): void
     {
-        // avg daily = 1, lead_time = 7, safety stock = 3 => ROP = (1*7) + 3 = 10
-        $this->assertEquals(10.0, $this->service->computeReorderPoint(1.0, 7, 3.0));
+        $result = $this->service->calculateAll([
+            'demand' => 1200,
+            'ordering_cost' => 10000,
+            'holding_cost' => 2400, // per tahun => Hp = 200 (bulanan)
+            'lead_time_days' => 6,
+            'period_type' => 'bulanan',
+        ]);
+
+        $this->assertEquals(100.0, $result['eoq']);
+        $this->assertEquals(600.0, $result['rop']);
+        $this->assertEquals(12.0, $result['order_frequency']);
+        $this->assertEquals(130000.0, $result['total_cost']);
     }
 
-    public function test_compute_reorder_point_is_rounded_up(): void
+    public function test_calculate_all_tahunan(): void
     {
-        // avg daily = 1.2, lead_time = 5, safety stock = 2 => (1.2*5) + 2 = 8 => ceil = 8
-        $this->assertEquals(8.0, $this->service->computeReorderPoint(1.2, 5, 2.0));
+        $result = $this->service->calculateAll([
+            'demand' => 1000,
+            'ordering_cost' => 1000,
+            'holding_cost' => 200, // tahunan => Hp = 200
+            'lead_time_days' => 10,
+            'period_type' => 'tahunan',
+        ]);
+
+        $this->assertEquals(100.0, $result['eoq']);
+        $this->assertEquals(10000.0, $result['rop']);
+        $this->assertEquals(10.0, $result['order_frequency']);
+        $this->assertEquals(20000.0, $result['total_cost']);
     }
 }
