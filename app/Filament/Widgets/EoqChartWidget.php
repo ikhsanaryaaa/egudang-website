@@ -7,7 +7,7 @@ use Filament\Widgets\ChartWidget;
 
 class EoqChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Grafik EOQ';
+    protected static ?string $heading = 'EOQ Chart';
 
     protected static ?int $sort = 5;
 
@@ -18,8 +18,8 @@ class EoqChartWidget extends ChartWidget
     protected function getFilters(): ?array
     {
         return [
-            'bulanan' => 'Bulanan',
-            'tahunan' => 'Tahunan',
+            'bulanan' => 'Monthly',
+            'tahunan' => 'Yearly',
         ];
     }
 

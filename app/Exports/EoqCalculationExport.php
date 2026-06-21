@@ -34,18 +34,18 @@ class EoqCalculationExport implements FromQuery, WithHeadings, WithMapping, With
     public function headings(): array
     {
         return [
-            'Tanggal',
-            'Periode',
+            'Date',
+            'Period',
             'Basis',
-            'Barang',
-            'Permintaan',
-            'Biaya Pemesanan',
-            'Biaya Penyimpanan',
-            'Lead Time (hari)',
+            'Product',
+            'Demand',
+            'Ordering Cost',
+            'Holding Cost',
+            'Lead Time (days)',
             'EOQ',
             'ROP',
-            'Frekuensi Pemesanan',
-            'Total Biaya',
+            'Order Frequency',
+            'Total Cost',
         ];
     }
 
@@ -69,6 +69,6 @@ class EoqCalculationExport implements FromQuery, WithHeadings, WithMapping, With
 
     public function title(): string
     {
-        return 'Laporan EOQ';
+        return 'EOQ Report';
     }
 }

@@ -19,11 +19,11 @@ class EoqReport extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-document-chart-bar';
 
-    protected static ?string $navigationGroup = 'Laporan';
+    protected static ?string $navigationGroup = 'Reports';
 
-    protected static ?string $navigationLabel = 'Laporan EOQ';
+    protected static ?string $navigationLabel = 'EOQ Report';
 
-    protected static ?string $title = 'Laporan Perhitungan EOQ';
+    protected static ?string $title = 'EOQ Calculation Report';
 
     protected static ?int $navigationSort = 3;
 
@@ -31,6 +31,21 @@ class EoqReport extends Page implements HasForms
 
     public ?string $date_from = null;
     public ?string $date_to = null;
+
+    /**
+     * Display the EOQ chart at the top of the report page (moved from dashboard).
+     */
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            \App\Filament\Widgets\EoqChartWidget::class,
+        ];
+    }
+
+    public function getHeaderWidgetsColumns(): int | array
+    {
+        return 1;
+    }
 
     public function mount(): void
     {
@@ -41,13 +56,13 @@ class EoqReport extends Page implements HasForms
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Filter Data Perhitungan EOQ')
+                Forms\Components\Section::make('EOQ Calculation Data Filter')
                     ->schema([
                         Forms\Components\DatePicker::make('date_from')
-                            ->label('Tanggal Awal')
+                            ->label('Start Date')
                             ->required(),
                         Forms\Components\DatePicker::make('date_to')
-                            ->label('Tanggal Akhir')
+                            ->label('End Date')
                             ->required(),
                     ])->columns(2),
             ]);
