@@ -18,13 +18,13 @@ class EoqCalculationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-calculator';
 
-    protected static ?string $navigationGroup = 'Perhitungan';
+    protected static ?string $navigationGroup = 'Calculation';
 
-    protected static ?string $navigationLabel = 'Perhitungan EOQ';
+    protected static ?string $navigationLabel = 'EOQ Calculation';
 
-    protected static ?string $pluralModelLabel = 'Perhitungan EOQ';
+    protected static ?string $pluralModelLabel = 'EOQ Calculations';
 
-    protected static ?string $modelLabel = 'Perhitungan EOQ';
+    protected static ?string $modelLabel = 'EOQ Calculation';
 
     protected static ?int $navigationSort = 4;
 
@@ -51,10 +51,10 @@ class EoqCalculationResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Data Perhitungan')
+                Forms\Components\Section::make('Calculation Data')
                     ->schema([
                         Forms\Components\Select::make('product_id')
-                            ->label('Barang')
+                            ->label('Product')
                             ->relationship('product', 'name')
                             ->required()
                             ->searchable()
@@ -70,14 +70,14 @@ class EoqCalculationResource extends Resource
                                 self::recalculate($get, $set);
                             }),
                         Forms\Components\DatePicker::make('calculation_date')
-                            ->label('Tanggal')
+                            ->label('Date')
                             ->required()
                             ->default(now()),
                         Forms\Components\Select::make('period_type')
-                            ->label('Basis Periode')
+                            ->label('Period Basis')
                             ->options([
-                                'bulanan' => 'Bulanan',
-                                'tahunan' => 'Tahunan',
+                                'bulanan' => 'Monthly',
+                                'tahunan' => 'Yearly',
                             ])
                             ->default('bulanan')
                             ->required()
@@ -85,18 +85,18 @@ class EoqCalculationResource extends Resource
                             ->live()
                             ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) => self::recalculate($get, $set)),
                         Forms\Components\TextInput::make('period_label')
-                            ->label('Periode')
-                            ->placeholder('Contoh: Januari 2026 atau 2026')
+                            ->label('Period')
+                            ->placeholder('e.g. January 2026 or 2026')
                             ->required()
                             ->maxLength(255),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Parameter EOQ')
-                    ->description('Biaya otomatis terisi dari default Barang dan dapat diubah per perhitungan.')
+                Forms\Components\Section::make('EOQ Parameters')
+                    ->description('Costs are auto-filled from the product defaults and can be adjusted per calculation.')
                     ->schema([
                         Forms\Components\TextInput::make('demand')
-                            ->label('Permintaan')
-                            ->helperText('Total permintaan dalam basis periode terpilih.')
+                            ->label('Demand')
+                            ->helperText('Total demand within the selected period basis.')
                             ->numeric()
                             ->required()
                             ->minValue(0)
@@ -104,7 +104,7 @@ class EoqCalculationResource extends Resource
                             ->live(onBlur: true)
                             ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) => self::recalculate($get, $set)),
                         Forms\Components\TextInput::make('ordering_cost')
-                            ->label('Biaya Pemesanan')
+                            ->label('Ordering Cost')
                             ->prefix('Rp')
                             ->numeric()
                             ->required()
@@ -113,8 +113,8 @@ class EoqCalculationResource extends Resource
                             ->live(onBlur: true)
                             ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) => self::recalculate($get, $set)),
                         Forms\Components\TextInput::make('holding_cost')
-                            ->label('Biaya Penyimpanan')
-                            ->helperText('Biaya simpan per unit (tahunan).')
+                            ->label('Holding Cost')
+                            ->helperText('Storage cost per unit (yearly).')
                             ->prefix('Rp')
                             ->numeric()
                             ->required()
@@ -124,7 +124,7 @@ class EoqCalculationResource extends Resource
                             ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) => self::recalculate($get, $set)),
                         Forms\Components\TextInput::make('lead_time_days')
                             ->label('Lead Time')
-                            ->suffix('hari')
+                            ->suffix('days')
                             ->numeric()
                             ->required()
                             ->minValue(0)
@@ -133,7 +133,7 @@ class EoqCalculationResource extends Resource
                             ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) => self::recalculate($get, $set)),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Hasil Perhitungan')
+                Forms\Components\Section::make('Calculation Results')
                     ->schema([
                         Forms\Components\TextInput::make('eoq')
                             ->label('EOQ')
@@ -144,11 +144,11 @@ class EoqCalculationResource extends Resource
                             ->readOnly()
                             ->numeric(),
                         Forms\Components\TextInput::make('order_frequency')
-                            ->label('Frekuensi Pemesanan')
+                            ->label('Order Frequency')
                             ->readOnly()
                             ->numeric(),
                         Forms\Components\TextInput::make('total_cost')
-                            ->label('Total Biaya')
+                            ->label('Total Cost')
                             ->prefix('Rp')
                             ->readOnly()
                             ->numeric(),
@@ -161,11 +161,11 @@ class EoqCalculationResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('calculation_date')
-                    ->label('Tanggal')
+                    ->label('Date')
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('period_label')
-                    ->label('Periode')
+                    ->label('Period')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('period_type')
                     ->label('Basis')
@@ -173,11 +173,11 @@ class EoqCalculationResource extends Resource
                     ->formatStateUsing(fn (string $state): string => ucfirst($state))
                     ->color(fn (string $state): string => $state === 'tahunan' ? 'info' : 'gray'),
                 Tables\Columns\TextColumn::make('product.name')
-                    ->label('Barang')
+                    ->label('Product')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('demand')
-                    ->label('Permintaan')
+                    ->label('Demand')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('eoq')
@@ -189,20 +189,20 @@ class EoqCalculationResource extends Resource
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total_cost')
-                    ->label('Total Biaya')
+                    ->label('Total Cost')
                     ->money('IDR')
                     ->sortable(),
             ])
             ->defaultSort('calculation_date', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('product_id')
-                    ->label('Barang')
+                    ->label('Product')
                     ->relationship('product', 'name'),
                 Tables\Filters\SelectFilter::make('period_type')
-                    ->label('Basis Periode')
+                    ->label('Period Basis')
                     ->options([
-                        'bulanan' => 'Bulanan',
-                        'tahunan' => 'Tahunan',
+                        'bulanan' => 'Monthly',
+                        'tahunan' => 'Yearly',
                     ]),
             ])
             ->actions([

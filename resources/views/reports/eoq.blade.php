@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Laporan Perhitungan EOQ</title>
+    <title>EOQ Calculation Report</title>
     <style>
         body { font-family: sans-serif; font-size: 11px; }
         h1 { font-size: 18px; text-align: center; margin-bottom: 5px; }
@@ -14,23 +14,23 @@
     </style>
 </head>
 <body>
-    <h1>Laporan Perhitungan EOQ - E-Gudang</h1>
+    <h1>EOQ Calculation Report - E-Gudang</h1>
     <div class="meta">
-        Periode: {{ $filters['date_from'] ?? '-' }} s/d {{ $filters['date_to'] ?? '-' }}<br>
-        Dicetak: {{ $filters['generated_at'] }}
+        Period: {{ $filters['date_from'] ?? '-' }} to {{ $filters['date_to'] ?? '-' }}<br>
+        Printed: {{ $filters['generated_at'] }}
     </div>
 
     <table>
         <thead>
             <tr>
-                <th>Tanggal</th>
-                <th>Periode</th>
+                <th>Date</th>
+                <th>Period</th>
                 <th>Basis</th>
-                <th>Barang</th>
-                <th class="right">Permintaan</th>
+                <th>Product</th>
+                <th class="right">Demand</th>
                 <th class="right">EOQ</th>
                 <th class="right">ROP</th>
-                <th class="right">Total Biaya</th>
+                <th class="right">Total Cost</th>
             </tr>
         </thead>
         <tbody>
@@ -47,7 +47,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="8" style="text-align:center;">Tidak ada data perhitungan pada rentang tanggal terpilih.</td>
+                <td colspan="8" style="text-align:center;">No calculation data within the selected date range.</td>
             </tr>
             @endforelse
         </tbody>
