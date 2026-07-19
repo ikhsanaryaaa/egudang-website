@@ -8,15 +8,15 @@ Aplikasi **inventory management** berbasis web untuk mengelola produk, kategori,
 
 ## Fitur Utama
 
-- **Authentication & RBAC** — Login/logout dengan role & permission berbasis [spatie/laravel-permission](https://spatie.be/docs/laravel-permission).
-- **User Management** — CRUD user, assign role, dan reset password.
-- **Category Management** — CRUD kategori dengan kode unik per kategori.
-- **Product Management** — CRUD produk, upload gambar, search & filter, serta **SKU generator** otomatis (format `KODE-BRAND-NAMA-UNIT-000`).
-- **Stock Transaction** — Pencatatan barang masuk, barang keluar, dan stock adjustment dengan histori transaksi. Stok tidak boleh negatif.
-- **File Upload** — Upload multiple dokumen (PDF, DOC/DOCX, XLS/XLSX, JPG/PNG) sebagai lampiran produk (Surat Jalan, Invoice, PO, dll).
-- **Dashboard** — Ringkasan total produk, low stock, stok masuk/keluar hari ini, dan recent activity.
-- **Reporting** — Export laporan stok ke **Excel** dan **PDF**, termasuk laporan low stock.
-- **Audit Log** — Pencatatan otomatis aktivitas Create, Update, dan Delete pada modul utama.
+- **Authentication & RBAC**: Login/logout dengan role & permission berbasis [spatie/laravel-permission](https://spatie.be/docs/laravel-permission).
+- **User Management**: CRUD user, assign role, dan reset password.
+- **Category Management**: CRUD kategori dengan kode unik per kategori.
+- **Product Management**: CRUD produk, upload gambar, search & filter, serta **SKU generator** otomatis (format `KODE-BRAND-NAMA-UNIT-000`).
+- **Stock Transaction**: Pencatatan barang masuk, barang keluar, dan stock adjustment dengan histori transaksi. Stok tidak boleh negatif.
+- **File Upload**: Upload multiple dokumen (PDF, DOC/DOCX, XLS/XLSX, JPG/PNG) sebagai lampiran produk (Surat Jalan, Invoice, PO, dll).
+- **Dashboard**: Ringkasan total produk, low stock, stok masuk/keluar hari ini, dan recent activity.
+- **Reporting**: Export laporan stok ke **Excel** dan **PDF**, termasuk laporan low stock.
+- **Audit Log**: Pencatatan otomatis aktivitas Create, Update, dan Delete pada modul utama.
 
 ---
 
@@ -37,12 +37,21 @@ Aplikasi **inventory management** berbasis web untuk mengelola produk, kategori,
 
 ## Role & Permission
 
-| Module | Manager | Kepala Gudang | Operator Gudang |
-|---|---|---|---|
-| Tracking Barang | Read | Read, Update | CRUD |
-| Manage User | CRUD | CRUD | No Access |
-| Manage Category | Read | CRUD | CRUD |
-| Manage Product | Read | Read | CRUD |
+| Module | Super Admin | Manager | Kepala Gudang | Operator Gudang |
+|---|---|---|---|---|
+| Dashboard | Read | Read | Read | Read |
+| Reports | Read/Export | Read/Export | Read/Export | No Access |
+| Stock Transactions | Read/Create | Read | CRUD Permission | Read/Create |
+| Categories | CRUD | Read | CRUD | Read |
+| Products | CRUD | No Access | CRUD | Read |
+| EOQ Calculations | CRUD | No Access | CRUD | CRUD |
+| User Management | CRUD | No Access | No Access | No Access |
+| Roles & Permissions | CRUD | No Access | No Access | No Access |
+| Audit Log | Read | No Access | Read | No Access |
+
+Stock transactions are immutable in the current UI, so edit/delete actions are not exposed even when a role owns the corresponding permissions.
+
+Super Admin can create custom roles and attach any combination of the available permissions. Custom roles can enter the admin panel and only see pages and actions allowed by their permissions. Role management and user role assignment remain restricted to Super Admin, and the `Super Admin` role itself cannot be edited or deleted.
 
 ---
 

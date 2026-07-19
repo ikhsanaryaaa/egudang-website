@@ -8,6 +8,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Spatie\Permission\Models\Role;
 
 class RoleResource extends Resource
@@ -23,7 +24,29 @@ class RoleResource extends Resource
     public static function canAccess(): bool
     {
         $user = auth()->user();
-        return $user && $user->hasRole(['Super Admin', 'Manager']);
+        return $user && $user->hasRole('Super Admin');
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->hasRole('Super Admin') ?? false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return (auth()->user()?->hasRole('Super Admin') ?? false)
+            && $record->name !== 'Super Admin';
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return (auth()->user()?->hasRole('Super Admin') ?? false)
+            && $record->name !== 'Super Admin';
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()?->hasRole('Super Admin') ?? false;
     }
 
     public static function form(Form $form): Form
@@ -45,6 +68,9 @@ class RoleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->checkIfRecordIsSelectableUsing(
+                fn (Role $record): bool => $record->name !== 'Super Admin',
+            )
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()

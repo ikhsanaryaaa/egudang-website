@@ -61,11 +61,13 @@ class UserResource extends Resource
                     ]),
 
                 Forms\Components\Section::make('Role Assignment')
+                    ->visible(fn (): bool => auth()->user()?->hasRole('Super Admin') ?? false)
                     ->schema([
                         Forms\Components\Select::make('roles')
                             ->multiple()
                             ->relationship('roles', 'name')
                             ->preload()
+                            ->dehydrated(fn (): bool => auth()->user()?->hasRole('Super Admin') ?? false)
                             ->required(),
                     ]),
             ]);

@@ -1,267 +1,197 @@
-# Revisi Sistem EOQ: Modul Perhitungan EOQ Transaksional + Graph Dashboard
+# Implement Dynamic Custom Roles and Permission Based Access Control
 
 ## Summary
 
-Implementasi EOQ saat ini masih **menempel pada modul Product** (kolom parameter EOQ, preview hasil, dan kolom tabel ada di `ProductResource`, dengan `EoqService` menghitung langsung dari satu produk). Pendekatan ini akan **direvisi** agar EOQ menjadi **modul perhitungan transaksional yang berdiri sendiri**, mengikuti pola aplikasi referensi (Sistem Pengendalian Persediaan Barang dengan Metode EOQ).
+Sistem Role-Based Access Control perlu mendukung custom role yang dapat dibuat dan dikelola oleh Super Admin. Akses modul tidak boleh bergantung pada nama role bawaan seperti `Manager`, `Kepala Gudang`, atau `Operator Gudang`. Setiap akses harus ditentukan oleh permission yang dipasangkan ke role.
 
-Pada model baru, setiap perhitungan EOQ adalah **satu record transaksi** yang mencatat: produk (Barang), periode (Bulan), permintaan (Permintaan/Demand), serta snapshot biaya pemesanan & penyimpanan, lalu menyimpan hasil **EOQ**, **ROP**, dan **Total Biaya (TIC)**. Produk hanya menyimpan **nilai default** (biaya pesan, biaya simpan, lead time) yang otomatis mengisi form perhitungan namun tetap bisa diubah per transaksi.
-
-Revisi ini juga menambahkan:
-- **Modul Perhitungan EOQ** (list + entri data) di admin panel.
-- **Laporan EOQ** dengan filter rentang tanggal (Tanggal Awal & Tanggal Akhir) beserta export.
-- **Graph EOQ** pada Dashboard yang memvisualisasikan hasil perhitungan.
+Super Admin harus dapat membuat role baru, memilih permission, mengubah permission, memasangkan role kepada user, dan menghapus custom role. Role `Super Admin` tetap mendapatkan akses penuh dan harus dilindungi dari perubahan atau penghapusan.
 
 ## Scope
 
-Mengubah EOQ dari atribut produk menjadi entitas transaksi tersendiri, plus pelaporan dan visualisasi.
+Perubahan mencakup:
 
-| Area | Perubahan |
-|---|---|
-| Database | Tabel baru `eoq_calculations`. Kolom pada `products` disesuaikan menjadi **default value** (`ordering_cost`, `holding_cost`, `lead_time_days`), kolom `safety_stock_days` dihapus |
-| Model | Model baru `EoqCalculation`; relasi `Product hasMany EoqCalculation` |
-| Service | `EoqService` direfactor: menghitung dari input transaksi (demand, cost, lead time, basis periode bulanan/tahunan), bukan dari objek `Product` |
-| Filament Resource | Resource baru `EoqCalculationResource` (list + create/entri data + view) |
-| Filament Page | Page baru `EoqReport` (Laporan EOQ) dengan filter tanggal + export Excel/PDF |
-| Dashboard | Widget chart baru `EoqChartWidget` |
-| Cleanup | Hapus section EOQ + kolom EOQ/ROP dari `ProductResource`; hapus / ganti `ReorderRecommendationWidget` |
-
-> Logika transaksi stok (`StockService`) dan batch costing (LIFO) **tetap tidak diubah**.
+- Mengizinkan user dengan custom role masuk ke Filament Admin Panel.
+- Mengubah pemeriksaan akses modul dari nama role menjadi permission.
+- Menambahkan permission untuk Dashboard, Reports, Report Export, EOQ Calculation, dan Audit Log.
+- Menambahkan policy untuk EOQ Calculation.
+- Membatasi pengelolaan role dan permission hanya untuk Super Admin.
+- Membatasi pemasangan role kepada user hanya untuk Super Admin.
+- Melindungi role `Super Admin` dari edit dan delete.
+- Mempertahankan permission bawaan untuk Manager, Kepala Gudang, dan Operator Gudang.
+- Menambahkan pengujian untuk role bawaan dan custom role.
 
 ## Tahapan Implementasi (Steps)
 
-### 1. Migration: Tabel `eoq_calculations`
+### 1. Define Complete Permissions
 
-Buat migration `create_eoq_calculations_table` dengan kolom:
+Tambahkan permission berikut ke `RoleAndPermissionSeeder`:
 
-- `id`
-- `product_id` — foreign key ke `products`
-- `calculation_date` (`date`) — Tanggal
-- `period_label` (`string`) — label periode (mis. "Januari 2026" untuk bulanan, atau "2026" untuk tahunan)
-- `period_type` (`enum`/`string`: `bulanan`|`tahunan`, default `bulanan`) — basis periode yang dipilih untuk perhitungan ini
-- `demand` (`integer`) — Permintaan total dalam basis periode yang dipilih
+- `view dashboard`
+- `view users`
+- `manage users`
+- `view products`
+- `create products`
+- `edit products`
+- `delete products`
+- `view categories`
+- `create categories`
+- `edit categories`
+- `delete categories`
+- `view stock movements`
+- `create stock movements`
+- `edit stock movements`
+- `delete stock movements`
+- `view reports`
+- `export reports`
+- `view eoq calculations`
+- `create eoq calculations`
+- `edit eoq calculations`
+- `delete eoq calculations`
+- `view audit logs`
 
-> **Basis periode**: `bulanan` memakai divisor 12 (konversi nilai tahunan ke bulanan), `tahunan` memakai divisor 1 (dipakai apa adanya). Basis dipilih per record sehingga histori dapat memuat campuran perhitungan bulanan dan tahunan.
-- `ordering_cost` (`decimal(15,2)`) — snapshot biaya per pemesanan
-- `holding_cost` (`decimal(15,2)`) — snapshot biaya simpan per unit per periode
-- `lead_time_days` (`integer`) — snapshot lead time
-- `eoq` (`decimal(15,2)`) — hasil EOQ
-- `rop` (`decimal(15,2)`) — hasil Reorder Point
-- `order_frequency` (`decimal(10,2)`) — frekuensi pemesanan (D / EOQ)
-- `total_cost` (`decimal(18,2)`) — Total Biaya / Total Inventory Cost (TIC)
-- `created_by` — foreign key ke `users`
-- `timestamps`
+Gunakan `syncPermissions()` untuk role bawaan agar permission lama yang tidak sesuai dapat dicabut ketika seeder dijalankan ulang.
 
-### 2. Migration: Sesuaikan Kolom `products`
+### 2. Allow Custom Roles to Access the Panel
 
-- Buat migration `adjust_eoq_default_columns_on_products_table`.
-- Drop kolom `safety_stock_days` (tidak dipakai di model referensi).
-- Pertahankan `ordering_cost`, `holding_cost`, `lead_time_days` sebagai **default value** produk (auto-fill form perhitungan).
-- Update `$fillable`/`$casts` pada `Product` sesuai.
+- Implementasikan kontrak `FilamentUser` pada model `User`.
+- Izinkan akses panel untuk user yang memiliki minimal satu role.
+- Hapus daftar nama role hard-coded dari middleware panel.
+- Tetap gunakan policy dan permission pada setiap modul untuk membatasi akses aktual.
+- Arahkan user setelah login ke modul pertama yang diizinkan jika Dashboard tidak tersedia.
 
-### 3. Model `EoqCalculation`
+### 3. Convert Pages to Permission Based Access
 
-- Buat `app/Models/EoqCalculation.php` dengan `$fillable`, `$casts`, relasi `product()` dan `creator()`.
-- Tambahkan relasi `eoqCalculations()` (hasMany) pada `Product`.
+- Dashboard menggunakan permission `view dashboard`.
+- Reports dan EOQ Report menggunakan permission `view reports`.
+- Tombol dan proses export menggunakan permission `export reports`.
+- Tambahkan pemeriksaan server-side pada proses export agar tidak dapat dipanggil tanpa permission.
 
-### 4. Refactor `EoqService`
+### 4. Add EOQ Calculation Policy
 
-Ubah service agar berbasis input transaksi (pure calculation, tanpa ketergantungan objek `Product`):
+- Buat `EoqCalculationPolicy`.
+- Hubungkan policy melalui `AuthServiceProvider`.
+- Gunakan permission view, create, edit, dan delete EOQ.
+- Hapus pemeriksaan nama role dari `EoqCalculationResource`.
 
-- `periodDivisor(string $periodType): int` — `bulanan` => `12`, `tahunan` => `1`.
-- `computeDemandPerPeriod(int $demand, string $periodType): float` — `demand / periodDivisor`
-- `computeHoldingPerPeriod(float $holdingCost, string $periodType): float` — `holdingCost / periodDivisor`
-- `computeEoq(float $demandPerPeriod, float $orderingCost, float $holdingPerPeriod): float` — `sqrt((2 * Dp * S) / Hp)`
-- `computeRop(float $demandPerPeriod, int $leadTimeDays): float` — `Dp * leadTime`
-- `computeOrderFrequency(int $demand, float $eoq): float` — `demand / eoq`
-- `computeTotalCost(int $demand, float $eoq, float $orderingCost, float $holdingPerPeriod): float` — `(D/EOQ)*S + (EOQ/2)*Hp`
-- `calculateAll(array $input): array` — gabungan seluruh hasil untuk disimpan ke record.
+### 5. Convert Audit Log Access
 
-Pertahankan guard pembagian nol (return `0` bila input tidak valid).
+- Gunakan permission `view audit logs` untuk membuka daftar dan detail Audit Log.
+- Pertahankan Audit Log sebagai data read-only.
+- Jangan menyediakan create, update, atau delete untuk Audit Log.
 
-### 5. Resource `EoqCalculationResource` (Filament)
+### 6. Protect Super Admin Management
 
-- Buat resource baru, navigation group **"Perhitungan"**, label **"Perhitungan EOQ"**.
-- **Form (Entri Data)**:
-  - `Select` Barang (`product_id`) — `live()`, saat dipilih auto-fill `ordering_cost`, `holding_cost`, `lead_time_days` dari default produk.
-  - `DatePicker` Tanggal (`calculation_date`).
-  - `Select` Basis Periode (`period_type`) — pilihan **Bulanan** / **Tahunan**, `live()`.
-  - `TextInput`/`Select` Periode (`period_label`) — label menyesuaikan basis (bulan+tahun untuk bulanan, tahun untuk tahunan).
-  - `TextInput` Permintaan (`demand`) — `live()`.
-  - `TextInput` Biaya Pemesanan, Biaya Penyimpanan, Lead Time (editable, default dari produk).
-  - `Placeholder` hasil real-time: EOQ, ROP, Order Frequency, Total Biaya (dihitung via `EoqService` saat input berubah).
-  - Simpan hasil ke kolom record saat create (gunakan `mutateFormDataBeforeCreate`).
-- **Table (Data Perhitungan EOQ)**: kolom No, Tanggal, Bulan, Barang, Permintaan, EOQ, ROP, Total Biaya, plus action View/Edit/Delete.
+- Role Management hanya dapat diakses oleh Super Admin.
+- Role `Super Admin` tidak dapat diedit atau dihapus.
+- Role `Super Admin` tidak dapat dipilih dalam bulk delete.
+- Form pemasangan role pada User Management hanya ditampilkan dan diproses untuk Super Admin.
+- User non-Super Admin tidak dapat mengubah atau menghapus akun yang memiliki role `Super Admin`.
 
-### 6. Page `EoqReport` (Laporan EOQ)
+### 7. Preserve Default Role Matrix
 
-- Buat `app/Filament/Pages/EoqReport.php`, navigation group **"Laporan"**, label **"Laporan EOQ"**.
-- Form filter: `DatePicker` Tanggal Awal & Tanggal Akhir + tombol Tampilkan.
-- Tampilkan tabel hasil perhitungan dalam rentang tanggal.
-- Sediakan export **Excel** & **PDF** (mengikuti pola modul reporting existing: `maatwebsite/excel`, `barryvdh/laravel-dompdf`).
+Konfigurasi role bawaan:
 
-### 7. Widget `EoqChartWidget` (Dashboard)
+| Module | Super Admin | Manager | Kepala Gudang | Operator Gudang |
+|---|---|---|---|---|
+| Dashboard | View | View | View | View |
+| Reports | View and Export | View and Export | View and Export | No Access |
+| Products | CRUD | No Access | CRUD | View |
+| Categories | CRUD | View | CRUD | View |
+| Stock Transactions | All Permissions | View | All Permissions | View and Create |
+| EOQ Calculations | CRUD | No Access | CRUD | CRUD |
+| User Management | CRUD | No Access | No Access | No Access |
+| Role and Permission Management | Full Access | No Access | No Access | No Access |
+| Audit Log | View | No Access | View | No Access |
 
-- Buat `app/Filament/Widgets/EoqChartWidget.php` (extends `ChartWidget`).
-- Visualisasikan hasil perhitungan EOQ, contoh: bar/line chart EOQ & ROP per Bulan, atau EOQ per Barang.
-- Sediakan filter periode bila relevan.
+### 8. Add Automated Tests
 
-### 8. Cleanup Implementasi Lama
+- Pastikan Manager hanya memperoleh permission monitoring yang telah ditentukan.
+- Pastikan Super Admin memperoleh seluruh permission.
+- Pastikan custom role dapat masuk ke panel.
+- Pastikan custom role hanya dapat membuka modul yang memiliki permission.
+- Pastikan perubahan permission pada custom role langsung mengubah akses user.
+- Pastikan role `Super Admin` tidak dapat diedit atau dihapus.
 
-- Hapus `Section::make('EOQ Parameters')` dan `Placeholder` hasil EOQ dari form `ProductResource`.
-- Hapus kolom tabel `eoq` & `reorder_point` dari `ProductResource`.
-- Hapus `ReorderRecommendationWidget` (atau ganti dengan widget berbasis `eoq_calculations`).
+### 9. Apply Database Changes
 
-### 9. Testing
+Jalankan perintah berikut:
 
-- Update/replace `EoqServiceTest` agar menguji method pure calculation yang baru (Dp, Hp, EOQ, ROP, frequency, total cost) + guard pembagian nol.
-- Jalankan `php artisan test`.
-
-### 10. Migration & Verifikasi
-
-- `php artisan migrate`
-- `php artisan optimize:clear`
-- Testing manual: entri data perhitungan, cek hasil EOQ/ROP/Total Biaya, cek Laporan EOQ + export, cek graph dashboard.
-
-## Expected Result
-
-- EOQ **tidak lagi muncul** di form maupun tabel Product.
-- Menu **Perhitungan EOQ** tersedia: bisa entri data (pilih barang, bulan, permintaan) dan menampilkan tabel hasil (No, Tanggal, Bulan, Barang, Permintaan, EOQ, ROP, Total Biaya, Aksi).
-- Hasil EOQ, ROP, Order Frequency, dan Total Biaya dihitung otomatis dan tersimpan per record.
-- Default biaya pesan/simpan/lead time produk otomatis mengisi form namun tetap bisa diubah per perhitungan.
-- Menu **Laporan EOQ** dengan filter Tanggal Awal/Akhir + export Excel & PDF berfungsi.
-- **Dashboard** menampilkan graph EOQ.
-- `php artisan test` hijau; tidak ada error di seluruh flow.
-
-## Features
-
-- Modul **Perhitungan EOQ** transaksional yang berdiri sendiri (tidak menempel pada produk).
-- Perhitungan otomatis EOQ, ROP, frekuensi pemesanan, dan Total Inventory Cost per transaksi.
-- Histori perhitungan EOQ per barang dan per periode.
-- **Laporan EOQ** dengan filter rentang tanggal + export Excel/PDF.
-- **Graph EOQ** pada dashboard untuk visualisasi hasil.
-- Produk berperan sebagai master default biaya yang mempercepat input.
-
-## Related Modules
-
-- Filament Admin Panel (v3.x) — Resource, Page, Widget
-- Eloquent Model (`App\Models\EoqCalculation`, `App\Models\Product`)
-- Service Layer (`App\Services\EoqService`)
-- Reporting (`maatwebsite/excel`, `barryvdh/laravel-dompdf`)
-- Database Migration (tabel `eoq_calculations`, `products`)
-
-## Related Files
-
-| File | Aksi |
-|---|---|
-| `database/migrations/xxxx_create_eoq_calculations_table.php` | File migration baru |
-| `database/migrations/xxxx_adjust_eoq_default_columns_on_products_table.php` | File migration baru (drop `safety_stock_days`) |
-| `app/Models/EoqCalculation.php` | Model baru |
-| `app/Models/Product.php` | Sesuaikan fillable/casts + relasi `eoqCalculations` |
-| `app/Services/EoqService.php` | Refactor ke perhitungan berbasis transaksi |
-| `app/Filament/Resources/EoqCalculationResource.php` | Resource baru (list + entri data) |
-| `app/Filament/Pages/EoqReport.php` | Page Laporan EOQ baru |
-| `app/Filament/Widgets/EoqChartWidget.php` | Widget graph dashboard baru |
-| `app/Filament/Resources/ProductResource.php` | Hapus section & kolom EOQ |
-| `app/Filament/Widgets/ReorderRecommendationWidget.php` | Hapus / ganti |
-| `tests/Unit/EoqServiceTest.php` | Update unit test formula baru |
-
-## Notes
-
-- **Basis periode (bulanan & tahunan)**: dipilih per perhitungan via `period_type`. `bulanan` memakai divisor 12 (nilai tahunan dikonversi ke bulanan), `tahunan` memakai divisor 1. Default `bulanan` agar konsisten dengan aplikasi referensi.
-- **Formula acuan** (dari referensi): `Dp = Demand / Period`, `Hp = HoldingCost / Period`, `EOQ = sqrt(2·Dp·S / Hp)`, `ROP = Dp · LeadTime`, `Total Biaya = (D/EOQ)·S + (EOQ/2)·Hp`. Verifikasi ulang rumus Total Biaya terhadap referensi sebelum finalisasi.
-- **Snapshot biaya**: nilai biaya pesan/simpan/lead time disimpan per record (snapshot) agar histori perhitungan tidak berubah ketika default produk diperbarui.
-- **Migration produk**: drop `safety_stock_days` bersifat destruktif — backup database terlebih dahulu. Kolom ini ditambahkan pada pekerjaan EOQ sebelumnya (PR #85) dan tidak dipakai pada model referensi.
-- **Permission**: tambahkan permission/role access untuk modul Perhitungan EOQ & Laporan EOQ sesuai matrix RBAC existing.
-- **Chart**: gunakan Filament `ChartWidget` (Chart.js bawaan) agar konsisten dengan stack, tanpa dependency tambahan.
-- Estimasi waktu pengerjaan: **~4-6 jam** (model, service, resource, report, widget, cleanup, test).
-
----
-
-# Translate EOQ Module UI to English and Relocate EOQ Chart to Report Page
-
-## Summary
-
-Mengubah seluruh UI pada modul EOQ dari Bahasa Indonesia menjadi Bahasa Inggris
-agar konsisten dengan label modul lain yang sudah berbahasa Inggris (Products,
-Inventory, dsb). Selain itu, memindahkan `EoqChartWidget` dari halaman Dashboard
-ke halaman **EOQ Report** supaya grafik EOQ dan ROP berada satu konteks dengan
-laporan dan filter periode, sehingga Dashboard lebih ringkas dan fokus pada
-ringkasan inventory.
-
-## Scope
-
-- Translation seluruh string UI modul EOQ (Filament Resource, Page, Widget,
-  Export, dan Blade views) ke Bahasa Inggris.
-- Relokasi `EoqChartWidget` dari Dashboard menjadi header widget pada halaman
-  EOQ Report.
-- Tidak mengubah logika perhitungan EOQ/ROP, skema database, maupun nilai
-  enum `period_type` (`bulanan`/`tahunan`) yang tersimpan di database. Yang
-  diubah hanya display label.
-- Tidak menyentuh modul lain (Audit Log, Stock Movement, Product) selain
-  memastikan tidak ada regresi.
-
-## Tahapan Implementasi (Steps)
-
-1. **Inventarisasi string Indonesia** pada modul EOQ menggunakan pencarian
-   pattern (`grep`) di direktori `app/` dan `resources/views/`.
-2. **Translate EoqCalculationResource** — navigation group/label, model label,
-   form section, field label, options, placeholder, helper text, table column,
-   dan filter.
-3. **Translate EoqReport page** — navigation group/label, title, section filter,
-   dan label tanggal.
-4. **Translate EoqChartWidget** — heading dan filter options (`Monthly`/`Yearly`).
-5. **Translate EoqCalculationExport** — heading kolom Excel dan judul sheet.
-6. **Translate Blade views** — `eoq-report.blade.php` (tabel di halaman) dan
-   `reports/eoq.blade.php` (template PDF export).
-7. **Relokasi grafik EOQ:**
-   - Override `getWidgets()` pada `Dashboard` untuk mengeluarkan
-     `EoqChartWidget` dan hanya menampilkan widget inventory.
-   - Tambahkan `getHeaderWidgets()` pada `EoqReport` agar grafik tampil di
-     bagian atas halaman laporan.
-8. **Clear cache** dengan `php artisan optimize:clear` agar perubahan label dan
-   widget langsung terlihat.
+```bash
+php artisan optimize:clear
+php artisan db:seed --class=RoleAndPermissionSeeder --force
+php artisan test --filter=RoleAccessTest
+```
 
 ## Expected Result
 
-- Sidebar menampilkan grup **Reports → EOQ Report** dan
-  **Calculation → EOQ Calculation** (sebelumnya Laporan/Perhitungan).
-- Seluruh form, tabel, filter, export Excel, dan PDF pada modul EOQ
-  berbahasa Inggris.
-- Grafik EOQ (`EOQ Chart`) tidak lagi muncul di Dashboard.
-- Grafik EOQ muncul di bagian atas halaman EOQ Report, lengkap dengan filter
-  `Monthly`/`Yearly`.
-- Perhitungan EOQ/ROP tetap berfungsi normal tanpa perubahan hasil.
+- Super Admin dapat mengakses seluruh modul dan action yang tersedia.
+- Super Admin dapat membuat custom role dengan kombinasi permission apa pun.
+- Super Admin dapat menambah atau mengurangi permission custom role.
+- Super Admin dapat memasangkan custom role kepada user.
+- User dengan custom role dapat login ke panel.
+- User dengan custom role diarahkan ke modul pertama yang dapat diakses.
+- Menu dan URL modul hanya dapat diakses jika role user memiliki permission yang sesuai.
+- Perubahan permission langsung memengaruhi akses user.
+- Manager tetap terbatas pada Dashboard, Reports, Categories read-only, dan Stock Transactions read-only.
+- Role `Super Admin` tidak dapat diedit atau dihapus.
+- Audit Log tetap read-only.
 
 ## Features
 
-- Konsistensi bahasa UI (full English) pada modul EOQ.
-- Kontekstualisasi grafik EOQ/ROP bersama laporan dan filter periode.
-- Dashboard yang lebih ringkas dengan fokus pada ringkasan inventory.
+- Dynamic custom role creation.
+- Permission assignment and removal.
+- Permission based navigation.
+- Permission based direct URL protection.
+- Dynamic panel access for custom roles.
+- Protected Super Admin role.
+- Restricted user role assignment.
+- Report export authorization.
+- Automated RBAC testing.
 
 ## Related Modules
 
-- EOQ Calculation (Filament Resource)
-- EOQ Report (Filament Page + export Excel/PDF)
-- EOQ Chart (Filament Widget)
-- Dashboard (Filament Page)
+- Authentication
+- Dashboard
+- User Management
+- Role Management
+- Permission Management
+- Product Management
+- Category Management
+- Stock Transactions
+- EOQ Calculations
+- Inventory Reports
+- EOQ Reports
+- Audit Log
 
 ## Related Files
 
-- `app/Filament/Resources/EoqCalculationResource.php`
-- `app/Filament/Pages/EoqReport.php`
+- `database/seeders/RoleAndPermissionSeeder.php`
+- `app/Models/User.php`
+- `app/Http/Responses/LoginResponse.php`
+- `app/Providers/AppServiceProvider.php`
+- `app/Providers/Filament/AdminPanelProvider.php`
+- `app/Providers/AuthServiceProvider.php`
 - `app/Filament/Pages/Dashboard.php`
-- `app/Filament/Widgets/EoqChartWidget.php`
-- `app/Exports/EoqCalculationExport.php`
-- `resources/views/filament/pages/eoq-report.blade.php`
-- `resources/views/reports/eoq.blade.php`
+- `app/Filament/Pages/Reports.php`
+- `app/Filament/Pages/EoqReport.php`
+- `app/Filament/Resources/UserResource.php`
+- `app/Filament/Resources/RoleResource.php`
+- `app/Filament/Resources/EoqCalculationResource.php`
+- `app/Policies/UserPolicy.php`
+- `app/Policies/ProductPolicy.php`
+- `app/Policies/CategoryPolicy.php`
+- `app/Policies/StockTransactionPolicy.php`
+- `app/Policies/EoqCalculationPolicy.php`
+- `app/Policies/AuditLogPolicy.php`
+- `tests/Feature/RoleAccessTest.php`
+- `README.md`
 
 ## Notes
 
-- Nilai enum `period_type` di database tetap `bulanan`/`tahunan`; hanya display
-  label yang menjadi `Monthly`/`Yearly`. Tidak diperlukan data migration.
-- String pada `AuditLogResource.php` seperti `'Barang Masuk' => 'Stock In'`
-  adalah mapping dari nilai aksi Indonesia yang tersimpan di database menuju
-  label tampilan Inggris, sehingga sengaja tidak diubah agar lookup tidak rusak.
-- `EoqChartWidget` didaftarkan sebagai header widget pada EOQ Report dan
-  dirender otomatis oleh komponen `<x-filament-panels::page>`, sehingga tidak
-  perlu mengubah Blade view halaman tersebut.
+- Permission mengontrol akses modul, bukan nama custom role.
+- Custom role tidak boleh diberi perlakuan khusus berdasarkan namanya.
+- Seeder hanya menyinkronkan role bawaan dan tidak menghapus custom role yang dibuat melalui panel.
+- Super Admin memperoleh semua permission yang tersedia setiap kali seeder dijalankan.
+- Audit Log tetap immutable untuk menjaga integritas histori aktivitas.
+- Stock Transaction tetap tidak menyediakan edit dan delete di UI untuk menjaga konsistensi histori stok.
+- PHP minimal yang digunakan oleh dependensi proyek saat ini adalah PHP 8.4.

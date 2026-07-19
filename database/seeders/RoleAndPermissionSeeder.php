@@ -19,6 +19,7 @@ class RoleAndPermissionSeeder extends Seeder
 
         // create permissions
         $permissions = [
+            'view dashboard',
             'view users',
             'manage users',
             'view products',
@@ -34,6 +35,12 @@ class RoleAndPermissionSeeder extends Seeder
             'edit stock movements',
             'delete stock movements',
             'view reports',
+            'export reports',
+            'view eoq calculations',
+            'create eoq calculations',
+            'edit eoq calculations',
+            'delete eoq calculations',
+            'view audit logs',
         ];
 
         foreach ($permissions as $permission) {
@@ -44,15 +51,22 @@ class RoleAndPermissionSeeder extends Seeder
 
         // Super Admin role
         $roleSuperAdmin = Role::firstOrCreate(['name' => 'Super Admin']);
-        $roleSuperAdmin->givePermissionTo(Permission::all());
+        $roleSuperAdmin->syncPermissions(Permission::all());
 
         // Manager role
         $roleManager = Role::firstOrCreate(['name' => 'Manager']);
-        $roleManager->givePermissionTo(Permission::all());
+        $roleManager->syncPermissions([
+            'view dashboard',
+            'view categories',
+            'view stock movements',
+            'view reports',
+            'export reports',
+        ]);
 
         // Kepala Gudang role
         $roleKepalaGudang = Role::firstOrCreate(['name' => 'Kepala Gudang']);
-        $roleKepalaGudang->givePermissionTo([
+        $roleKepalaGudang->syncPermissions([
+            'view dashboard',
             'view products',
             'create products',
             'edit products',
@@ -66,15 +80,26 @@ class RoleAndPermissionSeeder extends Seeder
             'edit stock movements',
             'delete stock movements',
             'view reports',
+            'export reports',
+            'view eoq calculations',
+            'create eoq calculations',
+            'edit eoq calculations',
+            'delete eoq calculations',
+            'view audit logs',
         ]);
 
         // Operator Gudang role
         $roleOperatorGudang = Role::firstOrCreate(['name' => 'Operator Gudang']);
-        $roleOperatorGudang->givePermissionTo([
+        $roleOperatorGudang->syncPermissions([
+            'view dashboard',
             'view products',
             'view categories',
             'view stock movements',
             'create stock movements',
+            'view eoq calculations',
+            'create eoq calculations',
+            'edit eoq calculations',
+            'delete eoq calculations',
         ]);
     }
 }
