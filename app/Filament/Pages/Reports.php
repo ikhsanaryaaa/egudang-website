@@ -36,6 +36,13 @@ class Reports extends Page implements HasForms
     public ?string $product_id = null;
     public ?string $transaction_type = null;
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        return $user && ($user->hasRole('Super Admin') || $user->can('view reports'));
+    }
+
     public function form(Form $form): Form
     {
         return $form
@@ -93,18 +100,22 @@ class Reports extends Page implements HasForms
                 ->label('Export Excel')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
+                ->visible(fn (): bool => auth()->user()?->can('export reports') ?? false)
                 ->action(fn () => $this->exportExcel()),
 
             Action::make('exportPdf')
                 ->label('Export PDF')
                 ->icon('heroicon-o-document')
                 ->color('danger')
+                ->visible(fn (): bool => auth()->user()?->can('export reports') ?? false)
                 ->action(fn () => $this->exportPdf()),
         ];
     }
 
     public function exportExcel()
     {
+        abort_unless(auth()->user()?->can('export reports'), 403);
+
         $filename = $this->report_type . '_' . now()->format('Ymd_His') . '.xlsx';
 
         return match ($this->report_type) {
@@ -127,6 +138,8 @@ class Reports extends Page implements HasForms
 
     public function exportPdf()
     {
+        abort_unless(auth()->user()?->can('export reports'), 403);
+
         $data = $this->getReportData();
         $view = 'reports.' . $this->report_type;
         $filename = $this->report_type . '_' . now()->format('Ymd_His') . '.pdf';

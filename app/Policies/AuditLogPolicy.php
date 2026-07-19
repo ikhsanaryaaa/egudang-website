@@ -9,11 +9,11 @@ class AuditLogPolicy
 {
     /**
      * Determine whether the user can view any audit logs.
-     * Only Manager and Kepala Gudang can access audit log history.
+     * Audit log visibility is controlled by permission.
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole(['Manager', 'Kepala Gudang', 'Super Admin']);
+        return $user->hasRole('Super Admin') || $user->hasPermissionTo('view audit logs');
     }
 
     /**
@@ -21,7 +21,7 @@ class AuditLogPolicy
      */
     public function view(User $user, AuditLog $auditLog): bool
     {
-        return $user->hasRole(['Manager', 'Kepala Gudang', 'Super Admin']);
+        return $user->hasRole('Super Admin') || $user->hasPermissionTo('view audit logs');
     }
 
     /**

@@ -12,6 +12,13 @@ class Dashboard extends \Filament\Pages\Dashboard
 
     protected static ?int $navigationSort = 1;
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        return $user && ($user->hasRole('Super Admin') || $user->can('view dashboard'));
+    }
+
     /**
      * Explicitly list dashboard widgets. EoqChartWidget is intentionally
      * excluded here because it now lives on the EOQ Report page.

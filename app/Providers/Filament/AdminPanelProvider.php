@@ -51,7 +51,6 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-                'role_or_permission:Super Admin|Manager|Kepala Gudang|Operator Gudang',
             ]);
     }
 }

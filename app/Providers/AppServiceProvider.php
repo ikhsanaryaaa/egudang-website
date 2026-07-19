@@ -12,7 +12,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            \Filament\Http\Responses\Auth\Contracts\LoginResponse::class,
+            \App\Http\Responses\LoginResponse::class,
+        );
     }
 
     /**
@@ -21,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Force HTTPS di production (di belakang Coolify reverse proxy)
-        if ($this->app->environment() !== 'local') {
+        if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
     }

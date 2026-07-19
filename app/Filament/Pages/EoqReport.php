@@ -32,6 +32,13 @@ class EoqReport extends Page implements HasForms
     public ?string $date_from = null;
     public ?string $date_to = null;
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        return $user && ($user->hasRole('Super Admin') || $user->can('view reports'));
+    }
+
     /**
      * Display the EOQ chart at the top of the report page (moved from dashboard).
      */
@@ -75,12 +82,14 @@ class EoqReport extends Page implements HasForms
                 ->label('Export Excel')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
+                ->visible(fn (): bool => auth()->user()?->can('export reports') ?? false)
                 ->action(fn () => $this->exportExcel()),
 
             Action::make('exportPdf')
                 ->label('Export PDF')
                 ->icon('heroicon-o-document')
                 ->color('danger')
+                ->visible(fn (): bool => auth()->user()?->can('export reports') ?? false)
                 ->action(fn () => $this->exportPdf()),
         ];
     }
@@ -104,6 +113,8 @@ class EoqReport extends Page implements HasForms
 
     public function exportExcel()
     {
+        abort_unless(auth()->user()?->can('export reports'), 403);
+
         $filename = 'laporan_eoq_' . now()->format('Ymd_His') . '.xlsx';
 
         return Excel::download(
@@ -114,6 +125,8 @@ class EoqReport extends Page implements HasForms
 
     public function exportPdf()
     {
+        abort_unless(auth()->user()?->can('export reports'), 403);
+
         $filename = 'laporan_eoq_' . now()->format('Ymd_His') . '.pdf';
 
         $pdf = Pdf::loadView('reports.eoq', [
