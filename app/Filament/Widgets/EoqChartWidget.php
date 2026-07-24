@@ -11,7 +11,7 @@ class EoqChartWidget extends ChartWidget
 
     protected static ?int $sort = 5;
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     public ?string $filter = 'bulanan';
 
@@ -20,6 +20,7 @@ class EoqChartWidget extends ChartWidget
         return [
             'bulanan' => 'Monthly',
             'tahunan' => 'Yearly',
+            'custom' => 'Custom',
         ];
     }
 
@@ -37,7 +38,7 @@ class EoqChartWidget extends ChartWidget
             ->values();
 
         $labels = $records->map(
-            fn (EoqCalculation $r) => $r->period_label . ' - ' . ($r->product->name ?? '')
+            fn (EoqCalculation $r) => $r->period_label.' - '.($r->product->name ?? '')
         )->toArray();
 
         return [

@@ -4,8 +4,8 @@ namespace App\Filament\Resources\EoqCalculationResource\Pages;
 
 use App\Filament\Resources\EoqCalculationResource;
 use App\Services\EoqService;
-use Filament\Resources\Pages\EditRecord;
 use Filament\Actions;
+use Filament\Resources\Pages\EditRecord;
 
 class EditEoqCalculation extends EditRecord
 {
@@ -24,6 +24,7 @@ class EditEoqCalculation extends EditRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $data = EoqCalculationResource::normalizePeriodData($data);
         $result = app(EoqService::class)->calculateAll($data);
 
         $data['eoq'] = $result['eoq'];

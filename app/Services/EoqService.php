@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use DateTimeImmutable;
+use DateTimeInterface;
+
 class EoqService
 {
     /**
@@ -15,19 +18,77 @@ class EoqService
     }
 
     /**
+     * Faktor nilai tahunan untuk basis periode terpilih.
+     */
+    public function periodFactor(
+        string $periodType,
+        DateTimeInterface|string|null $periodStart = null,
+        DateTimeInterface|string|null $periodEnd = null,
+    ): float {
+        if ($periodType !== 'custom') {
+            return 1 / $this->periodDivisor($periodType);
+        }
+
+        $start = $this->parseDate($periodStart);
+        $end = $this->parseDate($periodEnd);
+
+        if (! $start || ! $end || $end < $start) {
+            return 0.0;
+        }
+
+        $factor = 0.0;
+        $current = $start;
+
+        while ($current <= $end) {
+            $yearEnd = $current->setDate((int) $current->format('Y'), 12, 31);
+            $segmentEnd = min($end, $yearEnd);
+            $days = $current->diff($segmentEnd)->days + 1;
+            $daysInYear = $current->format('L') === '1' ? 366 : 365;
+
+            $factor += $days / $daysInYear;
+            $current = $segmentEnd->modify('+1 day');
+        }
+
+        return $factor;
+    }
+
+    /**
      * Hitung demand per periode berdasarkan basis periode.
      */
-    public function computeDemandPerPeriod(int $demand, string $periodType): float
-    {
-        return $demand / $this->periodDivisor($periodType);
+    public function computeDemandPerPeriod(
+        int $demand,
+        string $periodType,
+        DateTimeInterface|string|null $periodStart = null,
+        DateTimeInterface|string|null $periodEnd = null,
+    ): float {
+        return $demand * $this->periodFactor($periodType, $periodStart, $periodEnd);
     }
 
     /**
      * Hitung holding cost per periode berdasarkan basis periode.
      */
-    public function computeHoldingPerPeriod(float $holdingCost, string $periodType): float
+    public function computeHoldingPerPeriod(
+        float $holdingCost,
+        string $periodType,
+        DateTimeInterface|string|null $periodStart = null,
+        DateTimeInterface|string|null $periodEnd = null,
+    ): float {
+        return $holdingCost * $this->periodFactor($periodType, $periodStart, $periodEnd);
+    }
+
+    private function parseDate(DateTimeInterface|string|null $date): ?DateTimeImmutable
     {
-        return $holdingCost / $this->periodDivisor($periodType);
+        if ($date instanceof DateTimeInterface) {
+            return new DateTimeImmutable($date->format('Y-m-d'));
+        }
+
+        if (! is_string($date) || $date === '') {
+            return null;
+        }
+
+        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+
+        return $parsed && $parsed->format('Y-m-d') === $date ? $parsed : null;
     }
 
     /**
@@ -91,7 +152,7 @@ class EoqService
     /**
      * Hitung seluruh hasil EOQ dari input transaksi.
      *
-     * @param array{demand:int, ordering_cost:float, holding_cost:float, lead_time_days:int, period_type:string} $input
+     * @param  array{demand:int, ordering_cost:float, holding_cost:float, lead_time_days:int, period_type:string, period_start?:string, period_end?:string}  $input
      * @return array{demand_per_period:float, holding_per_period:float, eoq:float, rop:float, order_frequency:float, total_cost:float}
      */
     public function calculateAll(array $input): array
@@ -101,9 +162,11 @@ class EoqService
         $holdingCost = (float) ($input['holding_cost'] ?? 0);
         $leadTimeDays = (int) ($input['lead_time_days'] ?? 0);
         $periodType = $input['period_type'] ?? 'bulanan';
+        $periodStart = $input['period_start'] ?? null;
+        $periodEnd = $input['period_end'] ?? null;
 
-        $demandPerPeriod = $this->computeDemandPerPeriod($demand, $periodType);
-        $holdingPerPeriod = $this->computeHoldingPerPeriod($holdingCost, $periodType);
+        $demandPerPeriod = $this->computeDemandPerPeriod($demand, $periodType, $periodStart, $periodEnd);
+        $holdingPerPeriod = $this->computeHoldingPerPeriod($holdingCost, $periodType, $periodStart, $periodEnd);
         $eoq = $this->computeEoq($demandPerPeriod, $orderingCost, $holdingPerPeriod);
         $rop = $this->computeRop($demandPerPeriod, $leadTimeDays);
         $orderFrequency = $this->computeOrderFrequency($demand, $eoq);

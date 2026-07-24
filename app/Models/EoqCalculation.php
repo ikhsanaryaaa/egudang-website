@@ -14,6 +14,8 @@ class EoqCalculation extends Model
         'calculation_date',
         'period_label',
         'period_type',
+        'period_start',
+        'period_end',
         'demand',
         'ordering_cost',
         'holding_cost',
@@ -27,6 +29,8 @@ class EoqCalculation extends Model
 
     protected $casts = [
         'calculation_date' => 'date',
+        'period_start' => 'date',
+        'period_end' => 'date',
         'demand' => 'integer',
         'ordering_cost' => 'decimal:2',
         'holding_cost' => 'decimal:2',
