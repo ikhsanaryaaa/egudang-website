@@ -15,6 +15,7 @@ class CreateEoqCalculation extends CreateRecord
      */
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        $data = EoqCalculationResource::normalizePeriodData($data);
         $result = app(EoqService::class)->calculateAll($data);
 
         $data['eoq'] = $result['eoq'];
