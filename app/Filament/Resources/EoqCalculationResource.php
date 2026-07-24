@@ -6,7 +6,6 @@ use App\Filament\Resources\EoqCalculationResource\Pages;
 use App\Models\EoqCalculation;
 use App\Models\Product;
 use App\Services\EoqService;
-use Carbon\CarbonImmutable;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -55,39 +54,9 @@ class EoqCalculationResource extends Resource
         if (($data['period_type'] ?? 'bulanan') !== 'custom') {
             $data['period_start'] = null;
             $data['period_end'] = null;
-
-            return $data;
         }
-
-        $data['period_label'] = self::formatCustomPeriodLabel(
-            $data['period_start'] ?? null,
-            $data['period_end'] ?? null,
-        );
 
         return $data;
-    }
-
-    protected static function syncCustomPeriodLabel(Forms\Get $get, Forms\Set $set): void
-    {
-        if ($get('period_type') !== 'custom') {
-            return;
-        }
-
-        $set('period_label', self::formatCustomPeriodLabel(
-            $get('period_start'),
-            $get('period_end'),
-        ));
-    }
-
-    protected static function formatCustomPeriodLabel(?string $periodStart, ?string $periodEnd): string
-    {
-        if (! $periodStart || ! $periodEnd) {
-            return '';
-        }
-
-        return CarbonImmutable::parse($periodStart)->format('d M Y')
-            .' - '
-            .CarbonImmutable::parse($periodEnd)->format('d M Y');
     }
 
     public static function form(Form $form): Form
@@ -133,14 +102,12 @@ class EoqCalculationResource extends Resource
                                     $set('period_start', null);
                                     $set('period_end', null);
                                 }
-                                self::syncCustomPeriodLabel($get, $set);
                                 self::recalculate($get, $set);
                             }),
                         Forms\Components\TextInput::make('period_label')
                             ->label('Period')
                             ->placeholder('e.g. January 2026 or 2026')
-                            ->required(fn (Forms\Get $get): bool => $get('period_type') !== 'custom')
-                            ->hidden(fn (Forms\Get $get): bool => $get('period_type') === 'custom')
+                            ->required()
                             ->maxLength(255),
                         Forms\Components\DatePicker::make('period_start')
                             ->label('Period Start')
@@ -148,7 +115,6 @@ class EoqCalculationResource extends Resource
                             ->required(fn (Forms\Get $get): bool => $get('period_type') === 'custom')
                             ->live()
                             ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set): void {
-                                self::syncCustomPeriodLabel($get, $set);
                                 self::recalculate($get, $set);
                             }),
                         Forms\Components\DatePicker::make('period_end')
@@ -158,7 +124,6 @@ class EoqCalculationResource extends Resource
                             ->afterOrEqual('period_start')
                             ->live()
                             ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set): void {
-                                self::syncCustomPeriodLabel($get, $set);
                                 self::recalculate($get, $set);
                             }),
                     ])->columns(2),
